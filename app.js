@@ -22,6 +22,9 @@ let currentView = "day";
 let remoteBackendMode = "unknown";
 let draggedAppointmentId = "";
 let pointerDragState = null;
+let lastFormTrigger = null;
+let globalNoticeTimeoutId = 0;
+let pendingConfirmation = null;
 
 const elements = {
   appShell: document.querySelector(".app-shell"),
@@ -78,7 +81,7 @@ function initialise() {
 
   elements.form.addEventListener("submit", handleSubmit);
   elements.clearForm.addEventListener("click", resetForm);
-  elements.closeForm.addEventListener("click", closeFormPanel);
+  elements.closeForm.addEventListener("click", () => closeFormPanel());
   elements.deleteBtn.addEventListener("click", () => {
     const id = elements.appointmentId.value;
     if (id) {
@@ -87,14 +90,12 @@ function initialise() {
   });
   elements.newAppointment.addEventListener("click", () => {
     resetForm();
-    openFormPanel();
-    elements.patient.focus();
+    openFormPanel(elements.newAppointment);
   });
   if (elements.fabNewAppointment) {
     elements.fabNewAppointment.addEventListener("click", () => {
       resetForm();
-      openFormPanel();
-      elements.patient.focus();
+      openFormPanel(elements.fabNewAppointment);
     });
   }
   elements.previousDate.addEventListener("click", () => moveDate(-1));
@@ -115,22 +116,17 @@ function initialise() {
   if (elements.filterPsychologist) {
     elements.filterPsychologist.addEventListener("change", render);
   }
-  window.addEventListener("resize", render);
+  window.addEventListener("resize", () => {
+    render();
+    syncFormPresentation();
+  });
   document.addEventListener("pointermove", handlePointerDragMove);
   document.addEventListener("pointerup", handlePointerDragEnd);
   document.addEventListener("pointercancel", handlePointerDragEnd);
+  document.addEventListener("keydown", handleDocumentKeydown);
 
-  elements.tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      currentView = tab.dataset.view;
-      elements.tabs.forEach((item) => {
-        const isActive = item === tab;
-        item.classList.toggle("active", isActive);
-        item.setAttribute("aria-selected", String(isActive));
-      });
-      render();
-    });
-  });
+  initialiseViewTabs();
+  syncFormPresentation();
 
   render();
   refreshAppointments();
@@ -233,7 +229,7 @@ function resetForm(clearMessage = true) {
   }
 }
 
-function editAppointment(id) {
+function editAppointment(id, trigger = null) {
   const appointment = appointments.find((item) => item.id === id);
   if (!appointment) {
     return;
@@ -253,20 +249,346 @@ function editAppointment(id) {
   selectedDate = appointment.date;
   showFeedback("", "success");
   render();
-  openFormPanel();
-  elements.patient.focus();
+  openFormPanel(trigger);
 }
 
-function openFormPanel() {
+function initialiseViewTabs() {
+  elements.tabs.forEach((tab) => {
+    if (!tab.id && tab.dataset.view) {
+      tab.id = `view-tab-${tab.dataset.view}`;
+    }
+
+    tab.setAttribute("aria-controls", elements.scheduleContent.id);
+    tab.tabIndex = tab.dataset.view === currentView ? 0 : -1;
+    tab.addEventListener("click", () => activateView(tab));
+    tab.addEventListener("keydown", handleTabKeydown);
+  });
+
+  const activeTab = elements.tabs.find((tab) => tab.dataset.view === currentView) || elements.tabs[0];
+  activateView(activeTab, { renderView: false });
+}
+
+function activateView(tab, { focus = false, renderView = true } = {}) {
+  if (!tab) {
+    return;
+  }
+
+  currentView = tab.dataset.view || currentView;
+  elements.tabs.forEach((item) => {
+    const isActive = item === tab;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-selected", String(isActive));
+    item.tabIndex = isActive ? 0 : -1;
+
+    if (isActive && item.id) {
+      elements.scheduleContent.setAttribute("aria-labelledby", item.id);
+    }
+  });
+
+  if (focus) {
+    focusElement(tab);
+  }
+
+  if (renderView) {
+    render();
+  }
+}
+
+function handleTabKeydown(event) {
+  const currentIndex = elements.tabs.indexOf(event.currentTarget);
+  if (currentIndex < 0) {
+    return;
+  }
+
+  const keyActions = {
+    ArrowDown: (currentIndex + 1) % elements.tabs.length,
+    ArrowRight: (currentIndex + 1) % elements.tabs.length,
+    ArrowLeft: (currentIndex - 1 + elements.tabs.length) % elements.tabs.length,
+    ArrowUp: (currentIndex - 1 + elements.tabs.length) % elements.tabs.length,
+    End: elements.tabs.length - 1,
+    Home: 0,
+  };
+
+  if (!(event.key in keyActions)) {
+    return;
+  }
+
+  event.preventDefault();
+  activateView(elements.tabs[keyActions[event.key]], { focus: true });
+}
+
+function handleDocumentKeydown(event) {
+  const isOpen = !elements.formPanel.classList.contains("is-hidden");
+  if (!isOpen) {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeFormPanel();
+    return;
+  }
+
+  if (event.key === "Tab" && isMobileLayout()) {
+    trapFormFocus(event);
+  }
+}
+
+function openFormPanel(trigger = null) {
+  if (trigger) {
+    lastFormTrigger = trigger;
+  }
+
   elements.formPanel.classList.remove("is-hidden");
   elements.appShell.classList.add("form-open");
-  document.body.style.overflow = "hidden";
+  setFormExpandedState(true);
+  syncFormPresentation();
+  window.requestAnimationFrame(() => {
+    if (!elements.formPanel.classList.contains("is-hidden")) {
+      focusElement(elements.patient);
+    }
+  });
 }
 
-function closeFormPanel() {
+function closeFormPanel({ restoreFocus = true } = {}) {
+  const wasOpen = !elements.formPanel.classList.contains("is-hidden");
   elements.formPanel.classList.add("is-hidden");
   elements.appShell.classList.remove("form-open");
+  setFormExpandedState(false);
   document.body.style.overflow = "";
+  elements.formPanel.setAttribute("role", "complementary");
+  elements.formPanel.removeAttribute("aria-modal");
+
+  if (restoreFocus && wasOpen) {
+    restoreFormFocus();
+  }
+}
+
+function syncFormPresentation() {
+  const isOpen = !elements.formPanel.classList.contains("is-hidden");
+  setFormExpandedState(isOpen);
+
+  if (!isOpen) {
+    document.body.style.overflow = "";
+    elements.formPanel.setAttribute("role", "complementary");
+    elements.formPanel.removeAttribute("aria-modal");
+    return;
+  }
+
+  if (isMobileLayout()) {
+    document.body.style.overflow = "hidden";
+    elements.formPanel.setAttribute("role", "dialog");
+    elements.formPanel.setAttribute("aria-modal", "true");
+    return;
+  }
+
+  document.body.style.overflow = "";
+  elements.formPanel.setAttribute("role", "complementary");
+  elements.formPanel.removeAttribute("aria-modal");
+}
+
+function setFormExpandedState(isExpanded) {
+  elements.formPanel.setAttribute("aria-hidden", String(!isExpanded));
+  document.body.classList.toggle("form-panel-open", isExpanded);
+  [elements.newAppointment, elements.fabNewAppointment].filter(Boolean).forEach((button) => {
+    button.setAttribute("aria-expanded", String(isExpanded));
+  });
+}
+
+function restoreFormFocus() {
+  const target = [lastFormTrigger, elements.fabNewAppointment, elements.newAppointment].find(isElementFocusable);
+  lastFormTrigger = null;
+  focusElement(target);
+}
+
+function trapFormFocus(event) {
+  const focusable = getFocusableElements(elements.formPanel);
+
+  if (!focusable.length) {
+    event.preventDefault();
+    focusElement(elements.formPanel);
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (!elements.formPanel.contains(document.activeElement)) {
+    event.preventDefault();
+    focusElement(first);
+    return;
+  }
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    focusElement(last);
+    return;
+  }
+
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    focusElement(first);
+  }
+}
+
+function getFocusableElements(container) {
+  const selector = [
+    "a[href]",
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  return Array.from(container.querySelectorAll(selector)).filter(isElementFocusable);
+}
+
+function isElementFocusable(element) {
+  return Boolean(element && typeof element.focus === "function" && element.getClientRects().length);
+}
+
+function focusElement(element) {
+  if (!element || typeof element.focus !== "function") {
+    return;
+  }
+
+  try {
+    element.focus({ preventScroll: true });
+  } catch (error) {
+    element.focus();
+  }
+}
+
+function showGlobalMessage(message, type = "success") {
+  clearGlobalNotice();
+
+  if (!message) {
+    return;
+  }
+
+  const notice = document.createElement("div");
+  notice.className = `global-notice ${type}`;
+  notice.setAttribute("role", type === "error" ? "alert" : "status");
+  notice.textContent = message;
+  document.body.classList.add("notice-open");
+  document.body.append(notice);
+
+  globalNoticeTimeoutId = window.setTimeout(() => {
+    notice.remove();
+    document.body.classList.remove("notice-open");
+  }, 4200);
+}
+
+function requestConfirmation(message, { confirmText = "Confirmar", cancelText = "Cancelar", tone = "default" } = {}) {
+  clearGlobalNotice();
+
+  return new Promise((resolve) => {
+    const notice = document.createElement("div");
+    notice.className = `global-notice confirmation ${tone}`;
+    notice.setAttribute("role", "alertdialog");
+    notice.setAttribute("aria-label", message);
+
+    const text = document.createElement("p");
+    text.textContent = message;
+
+    const actions = document.createElement("div");
+    actions.className = "global-notice-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "ghost-button small";
+    cancelButton.textContent = cancelText;
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "primary-button small";
+    confirmButton.textContent = confirmText;
+
+    const complete = (value) => {
+      if (pendingConfirmation?.notice !== notice) {
+        return;
+      }
+
+      pendingConfirmation = null;
+      notice.remove();
+      document.body.classList.remove("notice-open");
+      resolve(value);
+    };
+
+    cancelButton.addEventListener("click", () => complete(false));
+    confirmButton.addEventListener("click", () => complete(true));
+    actions.append(cancelButton, confirmButton);
+    notice.append(text, actions);
+    document.body.classList.add("notice-open");
+    document.body.append(notice);
+    pendingConfirmation = { notice, resolve };
+    window.requestAnimationFrame(() => focusElement(cancelButton));
+  });
+}
+
+function requestAccessKey() {
+  clearGlobalNotice();
+
+  return new Promise((resolve) => {
+    const notice = document.createElement("form");
+    notice.className = "global-notice confirmation";
+    notice.setAttribute("role", "dialog");
+    notice.setAttribute("aria-label", "Chave de acesso da agenda");
+
+    const text = document.createElement("p");
+    text.textContent = "Digite a chave de acesso da agenda.";
+
+    const input = document.createElement("input");
+    input.className = "global-notice-field";
+    input.type = "password";
+    input.autocomplete = "current-password";
+    input.required = true;
+    input.placeholder = "Chave de acesso";
+
+    const actions = document.createElement("div");
+    actions.className = "global-notice-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "ghost-button small";
+    cancelButton.textContent = "Cancelar";
+
+    const submitButton = document.createElement("button");
+    submitButton.type = "submit";
+    submitButton.className = "primary-button small";
+    submitButton.textContent = "Entrar";
+
+    const complete = (value) => {
+      notice.remove();
+      document.body.classList.remove("notice-open");
+      resolve(value);
+    };
+
+    cancelButton.addEventListener("click", () => complete(""));
+    notice.addEventListener("submit", (event) => {
+      event.preventDefault();
+      complete(input.value.trim());
+    });
+
+    actions.append(cancelButton, submitButton);
+    notice.append(text, input, actions);
+    document.body.classList.add("notice-open");
+    document.body.append(notice);
+    window.requestAnimationFrame(() => focusElement(input));
+  });
+}
+
+function clearGlobalNotice() {
+  window.clearTimeout(globalNoticeTimeoutId);
+  document.querySelector(".global-notice")?.remove();
+  document.body.classList.remove("notice-open");
+
+  if (pendingConfirmation) {
+    pendingConfirmation.resolve(false);
+    pendingConfirmation.notice.remove();
+    pendingConfirmation = null;
+  }
 }
 
 async function deleteAppointment(id) {
@@ -275,7 +597,10 @@ async function deleteAppointment(id) {
     return;
   }
 
-  const confirmed = window.confirm(`Excluir atendimento de ${appointment.patient} em ${formatDate(appointment.date)}?`);
+  const confirmed = await requestConfirmation(`Excluir atendimento de ${appointment.patient} em ${formatDate(appointment.date)}?`, {
+    confirmText: "Excluir",
+    tone: "danger",
+  });
   if (!confirmed) {
     return;
   }
@@ -286,9 +611,10 @@ async function deleteAppointment(id) {
     closeFormPanel();
     render();
     setStorageStatus();
+    showGlobalMessage("Atendimento excluído.", "success");
   } catch (error) {
     setSyncStatus("Erro ao excluir", "error");
-    showFeedback(error.message || "Nao foi possivel excluir o atendimento.", "error");
+    showGlobalMessage(error.message || "Nao foi possivel excluir o atendimento.", "error");
   }
 }
 
@@ -547,10 +873,15 @@ async function rescheduleAppointment(appointment, changes) {
     return;
   }
 
+  await saveRescheduledAppointment(updatedApp);
+}
+
+async function saveRescheduledAppointment(updatedApp) {
   const validation = validateAppointment(updatedApp);
   if (!validation.ok) {
-    alert(validation.message);
-    return;
+    setSyncStatus("Conflito", "error");
+    showGlobalMessage(validation.message, "error");
+    return false;
   }
 
   setSyncStatus("Salvando...", "loading");
@@ -559,9 +890,13 @@ async function rescheduleAppointment(appointment, changes) {
     appointments = await persistAppointment(updatedApp);
     render();
     setStorageStatus();
+    showGlobalMessage("Atendimento reagendado.", "success");
+    return true;
   } catch (error) {
-    alert(error.message || "Não foi possível reagendar.");
+    setSyncStatus("Erro ao salvar", "error");
+    showGlobalMessage(error.message || "Não foi possível reagendar.", "error");
     setStorageStatus();
+    return false;
   }
 }
 
@@ -605,21 +940,7 @@ function renderWeekView() {
         date: dateValue
       };
 
-      const validation = validateAppointment(updatedApp);
-      if (!validation.ok) {
-        alert(validation.message);
-        return;
-      }
-
-      setSyncStatus("Salvando...", "loading");
-      try {
-        appointments = await persistAppointment(updatedApp);
-        render();
-        setStorageStatus();
-      } catch (error) {
-        alert(error.message || "Não foi possível reagendar.");
-        setStorageStatus();
-      }
+      await saveRescheduledAppointment(updatedApp);
     });
 
     const list = document.createElement("div");
@@ -797,21 +1118,7 @@ function renderRoomsView() {
         room: room.id
       };
 
-      const validation = validateAppointment(updatedApp);
-      if (!validation.ok) {
-        alert(validation.message);
-        return;
-      }
-
-      setSyncStatus("Salvando...", "loading");
-      try {
-        appointments = await persistAppointment(updatedApp);
-        render();
-        setStorageStatus();
-      } catch (error) {
-        alert(error.message || "Não foi possível reagendar.");
-        setStorageStatus();
-      }
+      await saveRescheduledAppointment(updatedApp);
     });
 
     const list = document.createElement("div");
@@ -858,18 +1165,19 @@ function createAppointmentBlock(appointment, roomClassName) {
   block.style.top = `${GRID_HEADER_HEIGHT + ((timeToMinutes(appointment.start) - OPEN_MINUTES) / 60) * SLOT_HEIGHT}px`;
   block.style.height = `${getBlockHeight(appointment)}px`;
   block.title = "Editar atendimento";
+  block.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
   block.innerHTML = `
     <span class="block-time">${appointment.start} - ${appointment.end}</span>
     <span class="block-patient">${escapeHtml(appointment.patient)}</span>
     <span class="block-meta">${escapeHtml(appointment.psychologist)}</span>
   `;
-  block.addEventListener("click", () => {
+  block.addEventListener("click", (event) => {
     if (block.dataset.suppressClick === "true") {
       delete block.dataset.suppressClick;
       return;
     }
 
-    editAppointment(appointment.id);
+    editAppointment(appointment.id, event.currentTarget);
   });
 
   // Drag and Drop
@@ -1039,8 +1347,13 @@ function createAppointmentCard(appointment, showDate) {
   card.querySelector(".appointment-patient").textContent = appointment.patient;
   card.querySelector(".appointment-meta").textContent = `${appointment.psychologist} · ${getRoomName(appointment.room)}`;
 
-  card.querySelector(".edit").addEventListener("click", () => editAppointment(appointment.id));
-  card.querySelector(".delete").addEventListener("click", () => deleteAppointment(appointment.id));
+  const editButton = card.querySelector(".edit");
+  const deleteButton = card.querySelector(".delete");
+
+  editButton.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
+  deleteButton.setAttribute("aria-label", getAppointmentActionLabel("Excluir", appointment));
+  editButton.addEventListener("click", (event) => editAppointment(appointment.id, event.currentTarget));
+  deleteButton.addEventListener("click", () => deleteAppointment(appointment.id));
 
   // Drag and Drop
   card.setAttribute("draggable", "true");
@@ -1066,7 +1379,8 @@ function createMobileAppointmentCard(appointment) {
   main.type = "button";
   main.className = "mobile-card-main";
   main.title = "Editar atendimento";
-  main.addEventListener("click", () => editAppointment(appointment.id));
+  main.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
+  main.addEventListener("click", (event) => editAppointment(appointment.id, event.currentTarget));
 
   const top = document.createElement("div");
   top.className = "mobile-card-top";
@@ -1093,6 +1407,7 @@ function createMobileAppointmentCard(appointment) {
   remove.type = "button";
   remove.className = "mobile-delete-button";
   remove.textContent = "Excluir";
+  remove.setAttribute("aria-label", getAppointmentActionLabel("Excluir", appointment));
   remove.addEventListener("click", () => deleteAppointment(appointment.id));
 
   card.append(main, remove);
@@ -1106,8 +1421,13 @@ function createMonthEvent(appointment) {
   button.className = `month-event ${room?.className || ""}`.trim();
   button.title = "Editar atendimento";
   button.textContent = `${appointment.start} ${appointment.patient}`;
-  button.addEventListener("click", () => editAppointment(appointment.id));
+  button.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
+  button.addEventListener("click", (event) => editAppointment(appointment.id, event.currentTarget));
   return button;
+}
+
+function getAppointmentActionLabel(action, appointment) {
+  return `${action} atendimento de ${appointment.patient}, ${formatDate(appointment.date)}, das ${appointment.start} às ${appointment.end}`;
 }
 
 function createMutedText(text) {
@@ -1293,7 +1613,7 @@ async function apiRequest(action, payload = {}, allowAccessKeyRetry = true) {
 
   if (allowAccessKeyRetry && /chave de acesso/i.test(response.message || "")) {
     sessionStorage.removeItem(ACCESS_KEY_STORAGE_KEY);
-    const accessKey = window.prompt("Digite a chave de acesso da agenda");
+    const accessKey = await requestAccessKey();
 
     if (!accessKey) {
       throw new Error("Chave de acesso obrigatoria.");

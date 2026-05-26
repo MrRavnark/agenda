@@ -1,12 +1,12 @@
 # Agenda Espaco do Pensar
 
-Agenda web temporaria para cadastro de atendimentos por paciente, psicologa, horario e sala.
+Agenda web para cadastro e organizacao de atendimentos por paciente, psicologa, horario e sala.
 
 ## Arquivos
 
 - `index.html`, `styles.css`, `app.js`: site estatico para GitHub Pages.
 - `config.js`: URL do Google Apps Script publicado.
-- `apps-script/Code.gs`: backend temporario que grava na aba `Agendamentos` da planilha Google.
+- `apps-script/Code.gs`: backend Google Apps Script que grava na aba `Agendamentos` da planilha Google.
 - `assets/logo-espaco-do-pensar.jpeg`: logo usado no cabecalho da agenda.
 
 ## Interface
@@ -15,10 +15,16 @@ Agenda web temporaria para cadastro de atendimentos por paciente, psicologa, hor
 - Visual de agenda com navegacao por dia, semana, mes e salas.
 - Filtro rapido por sala.
 - Grade diaria com marcacoes de 1 em 1 hora.
+- Cadastro e edicao em painel contextual no desktop e painel inferior no mobile.
+- Arrastar e soltar para reagendar por sala, dia ou semana.
 
-## Compatibilidade temporaria
+## Compatibilidade com planilha antiga
 
 O frontend tambem consegue ler a implantacao antiga do Apps Script que retorna apenas `Data`, `Hora`, `Paciente` e `Sala`. Nesse modo, a tela mostra `Planilha legado` e campos como psicologa, termino real e observacoes ficam limitados ate o backend novo ser implantado.
+
+## Cache do GitHub Pages
+
+O `index.html` carrega `styles.css?v=2` e `app.js?v=2` para forcar o navegador a buscar a versao atual dos assets apos mudancas visuais ou de comportamento. Ao publicar uma alteracao relevante em CSS ou JavaScript, incremente esse numero.
 
 ## Configurar Google Apps Script
 
@@ -41,4 +47,4 @@ O frontend tambem consegue ler a implantacao antiga do Apps Script que retorna a
 
 ## Observacao de privacidade
 
-Esta versao e temporaria. Evite registrar CPF, diagnosticos, laudos ou detalhes clinicos nas observacoes. Para uso permanente com dados de saude, o ideal e autenticar usuarios, auditar acessos e usar banco de dados com regras de permissao.
+Evite registrar CPF, diagnosticos, laudos ou detalhes clinicos nas observacoes. Para uso permanente com dados de saude, o ideal e autenticar usuarios, auditar acessos e usar banco de dados com regras de permissao.

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Agenda Espaço do Pensar</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=2" />
   </head>
   <body>
     <div class="app-shell">
@@ -12,24 +12,30 @@
         <div class="brand-lockup">
           <img class="brand-logo" src="assets/logo-espaco-do-pensar.jpeg" alt="Espaço do Pensar" />
           <div>
-            <p class="eyebrow">Espaço do Pensar</p>
+            <p class="brand-context">Espaço do Pensar</p>
             <h1>Agenda clínica</h1>
           </div>
         </div>
 
         <div class="topbar-actions">
-          <div class="sync-status" id="sync-status" data-state="local">Local</div>
-          <button class="new-appointment-button" type="button" id="new-appointment">
+          <div class="sync-status" id="sync-status" data-state="local" role="status" aria-live="polite">Local</div>
+          <button
+            class="new-appointment-button"
+            type="button"
+            id="new-appointment"
+            aria-controls="appointment-form-panel"
+            aria-expanded="false"
+          >
             <span aria-hidden="true">+</span>
             Novo atendimento
           </button>
 
           <div class="date-controls" aria-label="Navegação de datas">
-            <button class="icon-button" type="button" id="previous-date" title="Voltar">
+            <button class="icon-button" type="button" id="previous-date" title="Voltar" aria-label="Dia anterior">
               <span aria-hidden="true">‹</span>
             </button>
-            <button class="today-button" type="button" id="today-date">Hoje</button>
-            <button class="icon-button" type="button" id="next-date" title="Avançar">
+            <button class="today-button" type="button" id="today-date" aria-label="Ir para hoje">Hoje</button>
+            <button class="icon-button" type="button" id="next-date" title="Avançar" aria-label="Próximo dia">
               <span aria-hidden="true">›</span>
             </button>
           </div>
@@ -37,12 +43,20 @@
       </header>
 
       <main class="workspace">
-        <aside class="schedule-form-panel is-hidden" aria-label="Cadastro de atendimento" aria-modal="true">
+        <aside
+          class="schedule-form-panel is-hidden"
+          id="appointment-form-panel"
+          aria-labelledby="form-title"
+          aria-hidden="true"
+          tabindex="-1"
+        >
           <div class="panel-header">
             <h2 id="form-title">Novo atendimento</h2>
             <div class="panel-actions">
               <button class="ghost-button small" type="button" id="clear-form">Limpar</button>
-              <button class="ghost-button small" type="button" id="close-form">Fechar</button>
+              <button class="ghost-button small" type="button" id="close-form" aria-label="Fechar formulário">
+                Fechar
+              </button>
             </div>
           </div>
 
@@ -120,23 +134,65 @@
               </label>
 
               <div class="view-tabs" role="tablist" aria-label="Modo de visualização">
-                <button type="button" class="tab-button active" data-view="day" role="tab" aria-selected="true">
+                <button
+                  type="button"
+                  class="tab-button active"
+                  id="view-tab-day"
+                  data-view="day"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="schedule-content"
+                  tabindex="0"
+                >
                   Dia
                 </button>
-                <button type="button" class="tab-button" data-view="week" role="tab" aria-selected="false">
+                <button
+                  type="button"
+                  class="tab-button"
+                  id="view-tab-week"
+                  data-view="week"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="schedule-content"
+                  tabindex="-1"
+                >
                   Semana
                 </button>
-                <button type="button" class="tab-button" data-view="month" role="tab" aria-selected="false">
+                <button
+                  type="button"
+                  class="tab-button"
+                  id="view-tab-month"
+                  data-view="month"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="schedule-content"
+                  tabindex="-1"
+                >
                   Mês
                 </button>
-                <button type="button" class="tab-button" data-view="rooms" role="tab" aria-selected="false">
+                <button
+                  type="button"
+                  class="tab-button"
+                  id="view-tab-rooms"
+                  data-view="rooms"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="schedule-content"
+                  tabindex="-1"
+                >
                   Salas
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="schedule-content" id="schedule-content"></div>
+          <div
+            class="schedule-content"
+            id="schedule-content"
+            role="tabpanel"
+            aria-labelledby="view-tab-day"
+            tabindex="0"
+          ></div>
         </section>
       </main>
     </div>
@@ -155,11 +211,20 @@
       </article>
     </template>
 
-    <button class="fab-button" id="fab-new-appointment" title="Novo atendimento">
-      <span>+</span>
+    <button
+      class="fab-button"
+      id="fab-new-appointment"
+      type="button"
+      title="Novo atendimento"
+      aria-label="Novo atendimento"
+      aria-controls="appointment-form-panel"
+      aria-expanded="false"
+    >
+      <span aria-hidden="true">+</span>
+      <span class="fab-label">Novo</span>
     </button>
 
     <script src="config.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
   </body>
 </html>
