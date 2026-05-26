@@ -26,11 +26,11 @@ function setup() {
 }
 
 function doGet(e) {
-  return handleRequest_(e.parameter || {});
+  return handleRequest_(e && e.parameter ? e.parameter : {});
 }
 
 function doPost(e) {
-  const body = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
+  const body = e && e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
   return handleRequest_({
     action: body.action,
     key: body.key,
