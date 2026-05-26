@@ -1040,7 +1040,7 @@ function normalizeAppointment(item) {
     id: String(item.id || createId()),
     patient: String(item.patient || "").trim(),
     psychologist: String(item.psychologist || "").trim(),
-    date: String(item.date || "").trim(),
+    date: normalizeDateValue(item.date),
     start,
     end,
     room: normalizeRoomId(item.room),
