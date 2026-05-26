@@ -1,7 +1,7 @@
 const ROOMS = [
-  { id: "pm-1", name: "PM - Sala 1", className: "room-1" },
-  { id: "pm-3", name: "PM - Sala 3", className: "room-2" },
   { id: "pm-4", name: "PM - Sala 4", className: "room-3" },
+  { id: "pm-3", name: "PM - Sala 3", className: "room-2" },
+  { id: "pm-1", name: "PM - Sala 1", className: "room-1" },
   { id: "mf-2", name: "MF - Sala 2", className: "room-4" },
 ];
 
@@ -12,16 +12,18 @@ const CLOSE_MINUTES = 22 * 60;
 const SLOT_HEIGHT = 86;
 const GRID_HEADER_HEIGHT = 42;
 const DROP_SNAP_MINUTES = 60;
+const APPOINTMENT_BLOCK_INSET = 8;
 const AUTO_REFRESH_INTERVAL_MS = 60000;
 const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
 const CONFIG = window.AGENDA_CONFIG || {};
+const DIRECTORY = window.AGENDA_DIRECTORY || {};
 
 let appointments = [];
 let selectedDate = toDateInputValue(new Date());
 let currentView = "day";
 let remoteBackendMode = "unknown";
 let draggedAppointmentId = "";
-let pointerDragState = null;
+let dragOffsetY = 0;
 let lastFormTrigger = null;
 let globalNoticeTimeoutId = 0;
 let pendingConfirmation = null;
@@ -34,6 +36,8 @@ const elements = {
   appointmentId: document.querySelector("#appointment-id"),
   patient: document.querySelector("#patient"),
   psychologist: document.querySelector("#psychologist"),
+  patientOptions: document.querySelector("#patient-options"),
+  psychologistOptions: document.querySelector("#psychologist-options"),
   date: document.querySelector("#date"),
   start: document.querySelector("#start"),
   end: document.querySelector("#end"),
@@ -120,9 +124,6 @@ function initialise() {
     render();
     syncFormPresentation();
   });
-  document.addEventListener("pointermove", handlePointerDragMove);
-  document.addEventListener("pointerup", handlePointerDragEnd);
-  document.addEventListener("pointercancel", handlePointerDragEnd);
   document.addEventListener("keydown", handleDocumentKeydown);
 
   initialiseViewTabs();
@@ -164,8 +165,8 @@ async function handleSubmit(event) {
 function readForm() {
   return {
     id: elements.appointmentId.value || "",
-    patient: elements.patient.value.trim(),
-    psychologist: elements.psychologist.value.trim(),
+    patient: cleanName(elements.patient.value),
+    psychologist: cleanName(elements.psychologist.value),
     date: elements.date.value,
     start: elements.start.value,
     end: elements.end.value,
@@ -176,7 +177,11 @@ function readForm() {
 
 function validateAppointment(appointment) {
   if (!appointment.patient || !appointment.psychologist || !appointment.date || !appointment.start || !appointment.end) {
-    return { ok: false, message: "Preencha paciente, psicóloga, data e horário." };
+    return { ok: false, message: "Preencha paciente, profissional, data e horário." };
+  }
+
+  if (!isAllowedRoomId(appointment.room)) {
+    return { ok: false, message: "Selecione uma sala válida." };
   }
 
   const start = timeToMinutes(appointment.start);
@@ -203,7 +208,7 @@ function validateAppointment(appointment) {
 
   if (conflict) {
     const roomConflict = conflict.room === appointment.room;
-    const reason = roomConflict ? `a sala ${getRoomName(conflict.room)}` : `a psicóloga ${conflict.psychologist}`;
+    const reason = roomConflict ? `a sala ${getRoomName(conflict.room)}` : `o profissional ${conflict.psychologist}`;
     return {
       ok: false,
       message: `Conflito: ${reason} já tem atendimento de ${conflict.start} às ${conflict.end}.`,
@@ -634,6 +639,7 @@ function moveDate(direction) {
 }
 
 function render() {
+  populateDirectoryOptions();
   populatePsychologistFilter();
   const selectedAppointments = getAppointmentsForSelectedPeriod();
   renderPeriodLabel();
@@ -804,15 +810,19 @@ function renderMobileDayList(dayAppointments) {
 
 function getSnappedStartMinutes(column, clientY, duration) {
   const rect = column.getBoundingClientRect();
-  const y = clientY - rect.top - GRID_HEADER_HEIGHT;
+  const y = clientY - dragOffsetY - rect.top - GRID_HEADER_HEIGHT - APPOINTMENT_BLOCK_INSET / 2;
   const slotIndex = Math.round(y / SLOT_HEIGHT);
   const snappedMinutes = OPEN_MINUTES + slotIndex * DROP_SNAP_MINUTES;
   return Math.max(OPEN_MINUTES, Math.min(snappedMinutes, CLOSE_MINUTES - duration));
 }
 
+function getBlockTop(startMinutes) {
+  return GRID_HEADER_HEIGHT + ((startMinutes - OPEN_MINUTES) / DROP_SNAP_MINUTES) * SLOT_HEIGHT + APPOINTMENT_BLOCK_INSET / 2;
+}
+
 function getBlockHeight(appointment) {
   const duration = timeToMinutes(appointment.end) - timeToMinutes(appointment.start);
-  return Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - 8);
+  return Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - APPOINTMENT_BLOCK_INSET);
 }
 
 function updateDropPreview(column, room, clientY) {
@@ -833,8 +843,8 @@ function updateDropPreview(column, room, clientY) {
   const preview = getDropPreview(column);
 
   preview.className = `drop-preview ${room.className}`;
-  preview.style.top = `${GRID_HEADER_HEIGHT + ((start - OPEN_MINUTES) / DROP_SNAP_MINUTES) * SLOT_HEIGHT}px`;
-  preview.style.height = `${Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - 8)}px`;
+  preview.style.top = `${getBlockTop(start)}px`;
+  preview.style.height = `${Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - APPOINTMENT_BLOCK_INSET)}px`;
   preview.textContent = `${minutesToTime(start)} - ${minutesToTime(end)}`;
 }
 
@@ -1162,7 +1172,7 @@ function createAppointmentBlock(appointment, roomClassName) {
   const block = document.createElement("button");
   block.type = "button";
   block.className = `appointment-block ${roomClassName}`;
-  block.style.top = `${GRID_HEADER_HEIGHT + ((timeToMinutes(appointment.start) - OPEN_MINUTES) / 60) * SLOT_HEIGHT}px`;
+  block.style.top = `${getBlockTop(timeToMinutes(appointment.start))}px`;
   block.style.height = `${getBlockHeight(appointment)}px`;
   block.title = "Editar atendimento";
   block.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
@@ -1180,161 +1190,42 @@ function createAppointmentBlock(appointment, roomClassName) {
     editAppointment(appointment.id, event.currentTarget);
   });
 
-  // Drag and Drop
-  block.setAttribute("draggable", "true");
-  block.addEventListener("pointerdown", (event) => startPointerDrag(event, appointment, block));
-  block.addEventListener("dragstart", (e) => {
-    e.stopPropagation();
-    draggedAppointmentId = appointment.id;
-    e.dataTransfer.setData("text/plain", appointment.id);
-    e.dataTransfer.effectAllowed = "move";
-    block.classList.add("dragging");
-    document.body.classList.add("is-dragging-appointment");
-  });
-  block.addEventListener("dragend", (e) => {
-    e.stopPropagation();
-    draggedAppointmentId = "";
-    block.classList.remove("dragging");
-    document.body.classList.remove("is-dragging-appointment");
-    hideAllDropPreviews();
-  });
+  if (!isMobileLayout()) {
+    block.setAttribute("draggable", "true");
+    block.addEventListener("pointerdown", (event) => captureDragOffset(event, block));
+    block.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
+      captureDragOffset(e, block);
+      draggedAppointmentId = appointment.id;
+      e.dataTransfer.setData("text/plain", appointment.id);
+      e.dataTransfer.effectAllowed = "move";
+      block.classList.add("dragging");
+      document.body.classList.add("is-dragging-appointment");
+    });
+    block.addEventListener("dragend", (e) => {
+      e.stopPropagation();
+      draggedAppointmentId = "";
+      dragOffsetY = 0;
+      block.classList.remove("dragging");
+      document.body.classList.remove("is-dragging-appointment");
+      hideAllDropPreviews();
+    });
+  }
 
   return block;
 }
 
-function startPointerDrag(event, appointment, block) {
-  if (event.pointerType === "mouse") {
+function captureDragOffset(event, element) {
+  if (event.pointerType && event.pointerType !== "mouse") {
     return;
   }
 
-  if (event.button !== undefined && event.button !== 0) {
+  if (event.clientY <= 0) {
     return;
   }
 
-  if (typeof block.setPointerCapture === "function") {
-    block.setPointerCapture(event.pointerId);
-  }
-
-  pointerDragState = {
-    appointment,
-    block,
-    didDrag: false,
-    ghost: null,
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-  };
-}
-
-function handlePointerDragMove(event) {
-  if (!pointerDragState || (pointerDragState.pointerId !== undefined && event.pointerId !== pointerDragState.pointerId)) {
-    return;
-  }
-
-  const distance = Math.hypot(event.clientX - pointerDragState.startX, event.clientY - pointerDragState.startY);
-  if (!pointerDragState.didDrag && distance < 8) {
-    return;
-  }
-
-  event.preventDefault();
-
-  if (!pointerDragState.didDrag) {
-    pointerDragState.didDrag = true;
-    draggedAppointmentId = pointerDragState.appointment.id;
-    pointerDragState.block.classList.add("dragging");
-    pointerDragState.block.dataset.suppressClick = "true";
-    document.body.classList.add("is-dragging-appointment");
-    pointerDragState.ghost = createDragGhost(pointerDragState.block);
-    document.body.append(pointerDragState.ghost);
-  }
-
-  moveDragGhost(pointerDragState.ghost, event.clientX, event.clientY);
-
-  const column = getRoomColumnAtPoint(event.clientX, event.clientY);
-  if (!column) {
-    hideAllDropPreviews();
-    return;
-  }
-
-  document.querySelectorAll(".room-column.drag-over").forEach((item) => {
-    if (item !== column) {
-      item.classList.remove("drag-over");
-      hideDropPreview(item);
-    }
-  });
-
-  const room = ROOMS.find((item) => item.id === column.dataset.roomId);
-  if (!room) {
-    return;
-  }
-
-  column.classList.add("drag-over");
-  updateDropPreview(column, room, event.clientY);
-}
-
-async function handlePointerDragEnd(event) {
-  if (!pointerDragState || (pointerDragState.pointerId !== undefined && event.pointerId !== pointerDragState.pointerId)) {
-    return;
-  }
-
-  const state = pointerDragState;
-  pointerDragState = null;
-
-  if (!state.didDrag) {
-    return;
-  }
-
-  event.preventDefault();
-  state.block.classList.remove("dragging");
-  if (typeof state.block.releasePointerCapture === "function") {
-    try {
-      state.block.releasePointerCapture(state.pointerId);
-    } catch (error) {
-      // The pointer may already be released after a browser-level cancel.
-    }
-  }
-  state.ghost?.remove();
-  document.body.classList.remove("is-dragging-appointment");
-
-  const column = getRoomColumnAtPoint(event.clientX, event.clientY);
-  hideAllDropPreviews();
-  document.querySelectorAll(".room-column.drag-over").forEach((item) => item.classList.remove("drag-over"));
-  draggedAppointmentId = "";
-
-  if (!column) {
-    return;
-  }
-
-  const duration = timeToMinutes(state.appointment.end) - timeToMinutes(state.appointment.start);
-  const newStartMinutes = getSnappedStartMinutes(column, event.clientY, duration);
-
-  await rescheduleAppointment(state.appointment, {
-    room: column.dataset.roomId,
-    start: minutesToTime(newStartMinutes),
-    end: minutesToTime(newStartMinutes + duration),
-    date: selectedDate,
-  });
-}
-
-function createDragGhost(block) {
-  const ghost = block.cloneNode(true);
-  ghost.classList.add("drag-ghost");
-  ghost.removeAttribute("draggable");
-  ghost.style.width = `${block.getBoundingClientRect().width}px`;
-  ghost.style.height = `${block.getBoundingClientRect().height}px`;
-  return ghost;
-}
-
-function moveDragGhost(ghost, x, y) {
-  if (!ghost) {
-    return;
-  }
-
-  ghost.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
-}
-
-function getRoomColumnAtPoint(x, y) {
-  return document.elementFromPoint(x, y)?.closest(".room-column") || null;
+  const rect = element.getBoundingClientRect();
+  dragOffsetY = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
 }
 
 function createAppointmentCard(appointment, showDate) {
@@ -1355,17 +1246,24 @@ function createAppointmentCard(appointment, showDate) {
   editButton.addEventListener("click", (event) => editAppointment(appointment.id, event.currentTarget));
   deleteButton.addEventListener("click", () => deleteAppointment(appointment.id));
 
-  // Drag and Drop
-  card.setAttribute("draggable", "true");
-  card.addEventListener("dragstart", (e) => {
-    e.stopPropagation();
-    e.dataTransfer.setData("text/plain", appointment.id);
-    card.classList.add("dragging");
-  });
-  card.addEventListener("dragend", (e) => {
-    e.stopPropagation();
-    card.classList.remove("dragging");
-  });
+  if (!isMobileLayout()) {
+    card.setAttribute("draggable", "true");
+    card.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
+      draggedAppointmentId = appointment.id;
+      e.dataTransfer.setData("text/plain", appointment.id);
+      e.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+      document.body.classList.add("is-dragging-appointment");
+    });
+    card.addEventListener("dragend", (e) => {
+      e.stopPropagation();
+      draggedAppointmentId = "";
+      dragOffsetY = 0;
+      card.classList.remove("dragging");
+      document.body.classList.remove("is-dragging-appointment");
+    });
+  }
 
   return card;
 }
@@ -1676,7 +1574,7 @@ function isRemoteStorageEnabled() {
 function normalizeAppointments(items) {
   return items
     .map(normalizeAppointment)
-    .filter((appointment) => appointment.id && appointment.patient && appointment.date && appointment.start && appointment.end);
+    .filter((appointment) => appointment.id && appointment.patient && appointment.date && appointment.start && appointment.end && appointment.room);
 }
 
 function normalizeAppointment(item) {
@@ -1743,11 +1641,11 @@ function normalizeDateValue(value) {
 function normalizeRoomId(value) {
   const room = String(value || "").trim();
 
-  if (ROOMS.some((availableRoom) => availableRoom.id === room)) {
+  if (isAllowedRoomId(room)) {
     return room;
   }
 
-  return ROOMS.find((availableRoom) => normalize(availableRoom.name) === normalize(room))?.id || ROOMS[0].id;
+  return ROOMS.find((availableRoom) => normalize(availableRoom.name) === normalize(room))?.id || "";
 }
 
 function cleanLookupError(value) {
@@ -1779,6 +1677,10 @@ function getVisibleRooms() {
   return filter === "all" ? ROOMS : ROOMS.filter((room) => room.id === filter);
 }
 
+function isAllowedRoomId(roomId) {
+  return ROOMS.some((room) => room.id === roomId);
+}
+
 function filterAppointments(items) {
   let filtered = items;
 
@@ -1790,11 +1692,76 @@ function filterAppointments(items) {
   if (elements.filterPsychologist) {
     const psyFilter = elements.filterPsychologist.value;
     if (psyFilter !== "all") {
-      filtered = filtered.filter((item) => item.psychologist === psyFilter);
+      const psyFilterKey = normalizeNameKey(psyFilter);
+      filtered = filtered.filter((item) => normalizeNameKey(item.psychologist) === psyFilterKey);
     }
   }
 
   return filtered;
+}
+
+function populateDirectoryOptions() {
+  populateDatalist(elements.patientOptions, getPatientNames());
+  populateDatalist(elements.psychologistOptions, getPsychologistNames());
+}
+
+function populateDatalist(datalist, names) {
+  if (!datalist) return;
+
+  datalist.replaceChildren(
+    ...names.map((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      return option;
+    })
+  );
+}
+
+function getPatientNames() {
+  return getUniqueSortedNames([
+    ...(Array.isArray(DIRECTORY.patients) ? DIRECTORY.patients : []),
+    ...appointments.map((app) => app.patient),
+  ]);
+}
+
+function getPsychologistNames() {
+  return getUniqueSortedNames([
+    ...(Array.isArray(DIRECTORY.psychologists) ? DIRECTORY.psychologists : []),
+    ...appointments.map((app) => app.psychologist),
+  ]);
+}
+
+function getUniqueSortedNames(values) {
+  const namesByKey = new Map();
+
+  values.forEach((value) => {
+    const name = cleanName(value);
+    if (!name) {
+      return;
+    }
+
+    const key = normalizeNameKey(name);
+    if (!namesByKey.has(key)) {
+      namesByKey.set(key, name);
+    }
+  });
+
+  return Array.from(namesByKey.values()).sort(compareNames);
+}
+
+function cleanName(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function compareNames(a, b) {
+  return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+}
+
+function normalizeNameKey(value) {
+  return cleanName(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
 }
 
 function populatePsychologistFilter() {
@@ -1804,13 +1771,7 @@ function populatePsychologistFilter() {
   const currentValue = select.value || "all";
   select.innerHTML = '<option value="all">Todas</option>';
 
-  const psychologists = Array.from(
-    new Set(
-      appointments
-        .map((app) => app.psychologist)
-        .filter((name) => name && name.trim() !== "")
-    )
-  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const psychologists = getPsychologistNames();
 
   psychologists.forEach((psy) => {
     const option = document.createElement("option");
@@ -1819,8 +1780,8 @@ function populatePsychologistFilter() {
     select.append(option);
   });
 
-  if (psychologists.includes(currentValue)) {
-    select.value = currentValue;
+  if (psychologists.some((name) => normalizeNameKey(name) === normalizeNameKey(currentValue))) {
+    select.value = psychologists.find((name) => normalizeNameKey(name) === normalizeNameKey(currentValue));
   } else {
     select.value = "all";
   }

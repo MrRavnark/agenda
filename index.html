@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Agenda Espaço do Pensar</title>
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
   </head>
   <body>
     <div class="app-shell">
@@ -65,12 +65,21 @@
 
             <label>
               <span>Paciente</span>
-              <input id="patient" name="patient" type="text" required placeholder="Nome do paciente" />
+              <input id="patient" name="patient" type="text" list="patient-options" required placeholder="Nome do paciente" />
+              <datalist id="patient-options"></datalist>
             </label>
 
             <label>
-              <span>Psicóloga</span>
-              <input id="psychologist" name="psychologist" type="text" required placeholder="Nome da profissional" />
+              <span>Psicólogo(a)</span>
+              <input
+                id="psychologist"
+                name="psychologist"
+                type="text"
+                list="psychologist-options"
+                required
+                placeholder="Nome do(a) profissional"
+              />
+              <datalist id="psychologist-options"></datalist>
             </label>
 
             <div class="field-grid">
@@ -127,7 +136,7 @@
               </label>
 
               <label class="toolbar-filter psychologist-filter">
-                <span>Psicóloga</span>
+                <span>Psicólogo(a)</span>
                 <select id="filter-psychologist" name="filter-psychologist">
                   <option value="all">Todas</option>
                 </select>
@@ -225,6 +234,7 @@
     </button>
 
     <script src="config.js"></script>
-    <script src="app.js?v=2"></script>
+    <script src="directory.js?v=1"></script>
+    <script src="app.js?v=3"></script>
   </body>
 </html>

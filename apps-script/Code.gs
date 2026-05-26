@@ -15,9 +15,9 @@ const HEADERS = [
 ];
 
 const ROOM_NAMES = {
-  "pm-1": "PM - Sala 1",
-  "pm-3": "PM - Sala 3",
   "pm-4": "PM - Sala 4",
+  "pm-3": "PM - Sala 3",
+  "pm-1": "PM - Sala 1",
   "mf-2": "MF - Sala 2",
 };
 
