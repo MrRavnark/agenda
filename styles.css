@@ -403,7 +403,7 @@ textarea:focus {
   background: #eef5fb;
 }
 
-.room-filter {
+.toolbar-filter {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -413,7 +413,7 @@ textarea:focus {
   text-transform: uppercase;
 }
 
-.room-filter select {
+.toolbar-filter select {
   min-width: 150px;
   min-height: 38px;
   background: var(--surface-strong);
@@ -893,14 +893,14 @@ textarea:focus {
     gap: 10px;
   }
 
-  .room-filter {
+  .toolbar-filter {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     width: 100%;
   }
 
-  .room-filter select {
+  .toolbar-filter select {
     flex: 1;
     max-width: 200px;
     min-height: 36px;

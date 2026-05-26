@@ -44,6 +44,7 @@ const elements = {
   scheduleContent: document.querySelector("#schedule-content"),
   syncStatus: document.querySelector("#sync-status"),
   filterRoom: document.querySelector("#filter-room"),
+  filterPsychologist: document.querySelector("#filter-psychologist"),
   newAppointment: document.querySelector("#new-appointment"),
   fabNewAppointment: document.querySelector("#fab-new-appointment"),
   appointmentTemplate: document.querySelector("#appointment-template"),
@@ -106,6 +107,9 @@ function initialise() {
 
   elements.start.addEventListener("change", suggestEndTime);
   elements.filterRoom.addEventListener("change", render);
+  if (elements.filterPsychologist) {
+    elements.filterPsychologist.addEventListener("change", render);
+  }
   window.addEventListener("resize", () => {
     if (currentView === "day") {
       render();
@@ -300,6 +304,7 @@ function moveDate(direction) {
 }
 
 function render() {
+  populatePsychologistFilter();
   const selectedAppointments = getAppointmentsForSelectedPeriod();
   renderPeriodLabel();
   renderSummary(selectedAppointments);
@@ -361,7 +366,7 @@ function createSummaryPill(label, value) {
 function renderDayView() {
   const visibleRooms = getVisibleRooms();
   const dayAppointments = sortAppointments(
-    filterAppointmentsByRoom(appointments).filter((item) => item.date === selectedDate),
+    filterAppointments(appointments).filter((item) => item.date === selectedDate),
   );
   elements.scheduleContent.innerHTML = "";
 
@@ -479,7 +484,7 @@ function renderDayView() {
 function renderWeekView() {
   const week = getWeekDates(selectedDate);
   const weekDates = new Set(week.map(toDateInputValue));
-  const weekAppointments = sortAppointments(filterAppointmentsByRoom(appointments).filter((item) => weekDates.has(item.date)));
+  const weekAppointments = sortAppointments(filterAppointments(appointments).filter((item) => weekDates.has(item.date)));
 
   elements.scheduleContent.innerHTML = "";
   const grid = document.createElement("div");
@@ -552,7 +557,7 @@ function renderWeekView() {
 
 function renderMonthView() {
   const monthDates = getMonthCalendarDates(selectedDate);
-  const monthAppointments = sortAppointments(filterAppointmentsByRoom(appointments));
+  const monthAppointments = sortAppointments(filterAppointments(appointments));
   const selectedMonth = parseDate(selectedDate).getMonth();
 
   elements.scheduleContent.innerHTML = "";
@@ -612,7 +617,7 @@ function renderMonthView() {
 function renderRoomsView() {
   const week = getWeekDates(selectedDate);
   const weekDates = new Set(week.map(toDateInputValue));
-  const weekAppointments = sortAppointments(filterAppointmentsByRoom(appointments).filter((item) => weekDates.has(item.date)));
+  const weekAppointments = sortAppointments(filterAppointments(appointments).filter((item) => weekDates.has(item.date)));
   const visibleRooms = getVisibleRooms();
 
   elements.scheduleContent.innerHTML = "";
@@ -1082,7 +1087,7 @@ function normalizeRoomId(value) {
 }
 
 function getAppointmentsForSelectedPeriod() {
-  const visibleAppointments = filterAppointmentsByRoom(appointments);
+  const visibleAppointments = filterAppointments(appointments);
 
   if (currentView === "day") {
     return visibleAppointments.filter((item) => item.date === selectedDate);
@@ -1105,14 +1110,51 @@ function getVisibleRooms() {
   return filter === "all" ? ROOMS : ROOMS.filter((room) => room.id === filter);
 }
 
-function filterAppointmentsByRoom(items) {
-  const filter = elements.filterRoom.value;
+function filterAppointments(items) {
+  let filtered = items;
 
-  if (filter === "all") {
-    return items;
+  const roomFilter = elements.filterRoom.value;
+  if (roomFilter !== "all") {
+    filtered = filtered.filter((item) => item.room === roomFilter);
   }
 
-  return items.filter((item) => item.room === filter);
+  if (elements.filterPsychologist) {
+    const psyFilter = elements.filterPsychologist.value;
+    if (psyFilter !== "all") {
+      filtered = filtered.filter((item) => item.psychologist === psyFilter);
+    }
+  }
+
+  return filtered;
+}
+
+function populatePsychologistFilter() {
+  const select = elements.filterPsychologist;
+  if (!select) return;
+
+  const currentValue = select.value || "all";
+  select.innerHTML = '<option value="all">Todas</option>';
+
+  const psychologists = Array.from(
+    new Set(
+      appointments
+        .map((app) => app.psychologist)
+        .filter((name) => name && name.trim() !== "")
+    )
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  psychologists.forEach((psy) => {
+    const option = document.createElement("option");
+    option.value = psy;
+    option.textContent = psy;
+    select.append(option);
+  });
+
+  if (psychologists.includes(currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = "all";
+  }
 }
 
 function sortAppointments(items) {
