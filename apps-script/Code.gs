@@ -403,11 +403,11 @@ function sanitizeAppointment_(payload) {
   const appointment = {
     id: cleanText_(payload.id) || Utilities.getUuid(),
     patient: cleanText_(payload.patient),
-    psychologist: cleanText_(payload.psychologist),
-    date: cleanText_(payload.date),
-    start: cleanText_(payload.start),
-    end: cleanText_(payload.end),
-    room: cleanText_(payload.room),
+    psychologist: cleanLookupError_(payload.psychologist),
+    date: normalizeStoredDate_(payload.date),
+    start: normalizeStoredTime_(payload.start),
+    end: normalizeStoredTime_(payload.end),
+    room: normalizeStoredRoom_(payload.room),
     notes: cleanText_(payload.notes),
     createdAt: cleanText_(payload.createdAt),
     updatedAt: cleanText_(payload.updatedAt),
@@ -470,16 +470,16 @@ function appointmentToRow_(appointment) {
 
 function rowToAppointment_(row) {
   return {
-    id: row[0],
-    patient: row[1],
-    psychologist: row[2],
-    date: row[3],
-    start: row[4],
-    end: row[5],
-    room: row[6],
-    notes: row[7],
-    createdAt: row[8],
-    updatedAt: row[9],
+    id: cleanText_(row[0]),
+    patient: cleanText_(row[1]),
+    psychologist: cleanLookupError_(row[2]),
+    date: normalizeStoredDate_(row[3]),
+    start: normalizeStoredTime_(row[4]),
+    end: normalizeStoredTime_(row[5]),
+    room: normalizeStoredRoom_(row[6]),
+    notes: cleanText_(row[7]),
+    createdAt: cleanText_(row[8]),
+    updatedAt: cleanText_(row[9]),
   };
 }
 
@@ -502,6 +502,29 @@ function cleanText_(value) {
 
 function normalize_(value) {
   return cleanText_(value).toLowerCase();
+}
+
+function cleanLookupError_(value) {
+  const text = cleanText_(value);
+  return /^#N\/A(?:\s*\(\))?$/.test(text) ? "" : text;
+}
+
+function normalizeStoredDate_(value) {
+  return normalizeLegacyDate_("", value);
+}
+
+function normalizeStoredTime_(value) {
+  return normalizeLegacyTime_("", value);
+}
+
+function normalizeStoredRoom_(value) {
+  const roomText = cleanText_(value);
+
+  if (!roomText || ROOM_NAMES[roomText]) {
+    return roomText;
+  }
+
+  return Object.keys(ROOM_NAMES).find((roomId) => normalize_(ROOM_NAMES[roomId]) === normalize_(roomText)) || roomText;
 }
 
 function timeToMinutes_(value) {

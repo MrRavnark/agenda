@@ -11,6 +11,7 @@ const OPEN_MINUTES = 7 * 60;
 const CLOSE_MINUTES = 22 * 60;
 const SLOT_HEIGHT = 58;
 const AUTO_REFRESH_INTERVAL_MS = 60000;
+const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
 const CONFIG = window.AGENDA_CONFIG || {};
 
 let appointments = [];
@@ -110,11 +111,7 @@ function initialise() {
   if (elements.filterPsychologist) {
     elements.filterPsychologist.addEventListener("change", render);
   }
-  window.addEventListener("resize", () => {
-    if (currentView === "day") {
-      render();
-    }
-  });
+  window.addEventListener("resize", render);
 
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -370,13 +367,17 @@ function renderDayView() {
   );
   elements.scheduleContent.innerHTML = "";
 
+  if (isMobileLayout()) {
+    renderMobileDayList(dayAppointments);
+    return;
+  }
+
   const wrap = document.createElement("div");
   wrap.className = "day-grid-wrap";
 
-  const isMobile = window.innerWidth < 720;
-  const timeColWidth = isMobile ? 50 : 64;
-  const colMinWidth = isMobile ? 140 : 190;
-  const minGridWidth = isMobile ? (timeColWidth + visibleRooms.length * 140) : (timeColWidth + visibleRooms.length * 220);
+  const timeColWidth = 64;
+  const colMinWidth = 190;
+  const minGridWidth = timeColWidth + visibleRooms.length * 220;
 
   const grid = document.createElement("div");
   grid.className = "day-grid";
@@ -386,8 +387,7 @@ function renderDayView() {
   const timeColumn = document.createElement("div");
   timeColumn.className = "time-column";
   
-  const headerText = isMobile ? "Hora" : "Horário";
-  timeColumn.append(createHeaderCell(headerText, "time-head"));
+  timeColumn.append(createHeaderCell("Horário", "time-head"));
 
   for (let hour = 7; hour < 22; hour += 1) {
     const slot = document.createElement("div");
@@ -474,11 +474,24 @@ function renderDayView() {
   elements.scheduleContent.append(wrap);
 
   if (!dayAppointments.length) {
-    const empty = document.createElement("p");
-    empty.className = "muted-small";
-    empty.textContent = "Nenhum atendimento marcado para este dia.";
-    elements.scheduleContent.append(empty);
+    elements.scheduleContent.append(createEmptyState("Nenhum atendimento neste dia."));
   }
+}
+
+function renderMobileDayList(dayAppointments) {
+  const list = document.createElement("div");
+  list.className = "mobile-agenda-list";
+
+  if (!dayAppointments.length) {
+    elements.scheduleContent.append(createEmptyState("Nenhum atendimento neste dia."));
+    return;
+  }
+
+  dayAppointments.forEach((appointment) => {
+    list.append(createMobileAppointmentCard(appointment));
+  });
+
+  elements.scheduleContent.append(list);
 }
 
 function renderWeekView() {
@@ -558,9 +571,16 @@ function renderWeekView() {
 function renderMonthView() {
   const monthDates = getMonthCalendarDates(selectedDate);
   const monthAppointments = sortAppointments(filterAppointments(appointments));
-  const selectedMonth = parseDate(selectedDate).getMonth();
+  const selectedDateObject = parseDate(selectedDate);
+  const selectedMonth = selectedDateObject.getMonth();
+  const selectedYear = selectedDateObject.getFullYear();
 
   elements.scheduleContent.innerHTML = "";
+
+  if (isMobileLayout()) {
+    renderMobileMonthList(monthAppointments, selectedMonth, selectedYear);
+    return;
+  }
 
   const grid = document.createElement("div");
   grid.className = "month-grid";
@@ -614,6 +634,55 @@ function renderMonthView() {
   elements.scheduleContent.append(wrap);
 }
 
+function renderMobileMonthList(monthAppointments, selectedMonth, selectedYear) {
+  const visibleMonthAppointments = monthAppointments.filter((item) => {
+    const date = parseDate(item.date);
+    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+  });
+  const byDate = new Map();
+
+  visibleMonthAppointments.forEach((appointment) => {
+    if (!byDate.has(appointment.date)) {
+      byDate.set(appointment.date, []);
+    }
+
+    byDate.get(appointment.date).push(appointment);
+  });
+
+  if (!byDate.size) {
+    elements.scheduleContent.append(createEmptyState("Nenhum atendimento neste mês."));
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "mobile-month-list";
+
+  Array.from(byDate.entries()).forEach(([date, dayAppointments]) => {
+    const section = document.createElement("section");
+    section.className = "mobile-date-group";
+
+    const heading = document.createElement("header");
+    heading.className = "mobile-date-heading";
+
+    const title = document.createElement("h3");
+    title.textContent = `${formatWeekday(date)}, ${formatDate(date)}`;
+
+    const count = document.createElement("span");
+    count.textContent = `${dayAppointments.length} atendimento${dayAppointments.length === 1 ? "" : "s"}`;
+
+    heading.append(title, count);
+    section.append(heading);
+
+    dayAppointments.forEach((appointment) => {
+      section.append(createMobileAppointmentCard(appointment));
+    });
+
+    list.append(section);
+  });
+
+  elements.scheduleContent.append(list);
+}
+
 function renderRoomsView() {
   const week = getWeekDates(selectedDate);
   const weekDates = new Set(week.map(toDateInputValue));
@@ -623,7 +692,9 @@ function renderRoomsView() {
   elements.scheduleContent.innerHTML = "";
   const grid = document.createElement("div");
   grid.className = "rooms-grid";
-  grid.style.gridTemplateColumns = `repeat(${visibleRooms.length}, minmax(220px, 1fr))`;
+  if (!isMobileLayout()) {
+    grid.style.gridTemplateColumns = `repeat(${visibleRooms.length}, minmax(220px, 1fr))`;
+  }
 
   visibleRooms.forEach((room) => {
     const column = document.createElement("section");
@@ -766,6 +837,48 @@ function createAppointmentCard(appointment, showDate) {
   return card;
 }
 
+function createMobileAppointmentCard(appointment) {
+  const room = ROOMS.find((item) => item.id === appointment.room);
+  const card = document.createElement("article");
+  card.className = `mobile-appointment-card ${room?.className || ""}`.trim();
+
+  const main = document.createElement("button");
+  main.type = "button";
+  main.className = "mobile-card-main";
+  main.title = "Editar atendimento";
+  main.addEventListener("click", () => editAppointment(appointment.id));
+
+  const top = document.createElement("div");
+  top.className = "mobile-card-top";
+
+  const time = document.createElement("span");
+  time.className = "mobile-card-time";
+  time.textContent = `${appointment.start} - ${appointment.end}`;
+
+  const roomBadge = document.createElement("span");
+  roomBadge.className = "room-badge";
+  roomBadge.textContent = getRoomName(appointment.room);
+
+  const patient = document.createElement("h3");
+  patient.textContent = appointment.patient;
+
+  const meta = document.createElement("p");
+  meta.className = "mobile-card-meta";
+  meta.textContent = appointment.psychologist || "Profissional não informada";
+
+  top.append(time, roomBadge);
+  main.append(top, patient, meta);
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "mobile-delete-button";
+  remove.textContent = "Excluir";
+  remove.addEventListener("click", () => deleteAppointment(appointment.id));
+
+  card.append(main, remove);
+  return card;
+}
+
 function createMonthEvent(appointment) {
   const room = ROOMS.find((item) => item.id === appointment.room);
   const button = document.createElement("button");
@@ -782,6 +895,13 @@ function createMutedText(text) {
   paragraph.className = "muted-small";
   paragraph.textContent = text;
   return paragraph;
+}
+
+function createEmptyState(text) {
+  const empty = document.createElement("div");
+  empty.className = "empty-state";
+  empty.textContent = text;
+  return empty;
 }
 
 async function refreshAppointments(options = {}) {
@@ -910,13 +1030,17 @@ async function fetchRemoteList() {
   const url = new URL(CONFIG.apiUrl);
   url.searchParams.set("action", "list");
 
-  const response = await fetch(url.toString(), { cache: "no-store" });
+  try {
+    const response = await fetch(url.toString(), { cache: "no-store" });
 
-  if (!response.ok) {
-    throw new Error("Nao foi possivel carregar a planilha.");
+    if (!response.ok) {
+      throw new Error("Nao foi possivel carregar a planilha.");
+    }
+
+    return response.json();
+  } catch {
+    return jsonpRequest("list", {});
   }
-
-  return response.json();
 }
 
 async function writeLegacyAppointments(nextAppointments) {
@@ -1039,7 +1163,7 @@ function normalizeAppointment(item) {
   return {
     id: String(item.id || createId()),
     patient: String(item.patient || "").trim(),
-    psychologist: String(item.psychologist || "").trim(),
+    psychologist: cleanLookupError(item.psychologist),
     date: normalizeDateValue(item.date),
     start,
     end,
@@ -1084,6 +1208,11 @@ function normalizeRoomId(value) {
   }
 
   return ROOMS.find((availableRoom) => normalize(availableRoom.name) === normalize(room))?.id || ROOMS[0].id;
+}
+
+function cleanLookupError(value) {
+  const text = String(value || "").trim();
+  return /^#N\/A(?:\s*\(\))?$/.test(text) ? "" : text;
 }
 
 function getAppointmentsForSelectedPeriod() {
@@ -1301,12 +1430,16 @@ function getRoomName(id) {
 
 function getRoomColor(className) {
   const colors = {
-    "room-1": "#0b9fd0",
-    "room-2": "#8359dd",
-    "room-3": "#d11bd5",
-    "room-4": "#2f73c6",
+    "room-1": "oklch(0.58 0.14 221)",
+    "room-2": "oklch(0.55 0.17 294)",
+    "room-3": "oklch(0.58 0.2 333)",
+    "room-4": "oklch(0.55 0.15 259)",
   };
-  return colors[className] || "#0b9fd0";
+  return colors[className] || "oklch(0.58 0.14 221)";
+}
+
+function isMobileLayout() {
+  return window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
 }
 
 function normalize(value) {

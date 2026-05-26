@@ -1,20 +1,22 @@
 :root {
-  --bg: #f7f9fc;
-  --surface: #fbfcff;
-  --surface-strong: #fefcff;
-  --ink: #1e2d3f;
-  --muted: #647287;
-  --line: #d8e1ec;
-  --line-strong: #b9c7d8;
-  --cyan: #0b9fd0;
-  --cyan-dark: #087da5;
-  --purple: #8359dd;
-  --purple-dark: #6441b4;
-  --magenta: #d11bd5;
-  --blue: #2f73c6;
-  --warning: #b7791f;
-  --danger: #b24158;
-  --shadow: 0 16px 38px rgba(38, 64, 93, 0.11);
+  --bg: oklch(0.975 0.012 235);
+  --surface: oklch(0.992 0.006 235);
+  --surface-strong: oklch(0.998 0.007 235);
+  --surface-soft: oklch(0.955 0.018 235);
+  --ink: oklch(0.25 0.036 246);
+  --muted: oklch(0.51 0.035 246);
+  --line: oklch(0.88 0.024 238);
+  --line-strong: oklch(0.78 0.034 238);
+  --cyan: oklch(0.58 0.14 221);
+  --cyan-dark: oklch(0.47 0.12 221);
+  --purple: oklch(0.55 0.17 294);
+  --purple-dark: oklch(0.45 0.15 294);
+  --magenta: oklch(0.58 0.2 333);
+  --blue: oklch(0.55 0.15 259);
+  --warning: oklch(0.57 0.12 72);
+  --danger: oklch(0.5 0.14 14);
+  --on-accent: oklch(0.992 0.006 235);
+  --shadow: 0 16px 38px color-mix(in oklch, var(--ink) 12%, transparent);
   --radius: 8px;
   --slot-height: 58px;
   font-family:
@@ -31,8 +33,13 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    linear-gradient(180deg, rgba(239, 248, 255, 0.9), rgba(255, 255, 255, 0)),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--cyan) 8%, var(--surface)) 0,
+      color-mix(in oklch, var(--surface) 86%, transparent) 34rem
+    ),
     var(--bg);
+  -webkit-tap-highlight-color: color-mix(in oklch, var(--cyan) 18%, transparent);
 }
 
 button,
@@ -44,6 +51,14 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in oklch, var(--cyan) 32%, transparent);
+  outline-offset: 2px;
 }
 
 .app-shell {
@@ -71,12 +86,12 @@ button {
   width: 54px;
   height: 54px;
   flex: 0 0 auto;
-  border: 1px solid rgba(11, 159, 208, 0.18);
+  border: 1px solid color-mix(in oklch, var(--cyan) 22%, var(--line));
   border-radius: 16px;
   background: var(--surface-strong);
   object-fit: contain;
   padding: 4px;
-  box-shadow: 0 10px 24px rgba(38, 64, 93, 0.1);
+  box-shadow: 0 10px 24px color-mix(in oklch, var(--ink) 10%, transparent);
 }
 
 .eyebrow {
@@ -126,7 +141,7 @@ h2 {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface-strong);
   color: var(--muted);
   padding: 0 12px;
   font-size: 0.78rem;
@@ -199,7 +214,7 @@ h2 {
   padding: 0 16px;
   border-color: var(--cyan);
   background: var(--cyan);
-  color: #fbfcff;
+  color: var(--on-accent);
   font-weight: 800;
 }
 
@@ -220,13 +235,13 @@ h2 {
   gap: 8px;
   border-color: var(--cyan);
   background: var(--cyan);
-  color: #fbfcff;
+  color: var(--on-accent);
 }
 
 .new-appointment-button:hover {
   background: var(--cyan-dark);
   border-color: var(--cyan-dark);
-  color: #fbfcff;
+  color: var(--on-accent);
 }
 
 .new-appointment-button span {
@@ -253,7 +268,7 @@ h2 {
 .schedule-area {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(251, 252, 255, 0.96);
+  background: color-mix(in oklch, var(--surface) 96%, transparent);
   box-shadow: var(--shadow);
 }
 
@@ -278,7 +293,7 @@ h2 {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(20, 33, 49, 0.38);
+  background: color-mix(in oklch, var(--ink) 38%, transparent);
 }
 
 .panel-actions {
@@ -320,7 +335,7 @@ textarea {
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface-strong);
   color: var(--ink);
   padding: 9px 10px;
   outline: none;
@@ -335,7 +350,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(11, 159, 208, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--cyan) 18%, transparent);
 }
 
 .field-grid {
@@ -383,7 +398,7 @@ textarea:focus {
   min-height: 28px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface-strong);
   color: var(--muted);
   padding: 0 10px;
   font-size: 0.8rem;
@@ -400,7 +415,7 @@ textarea:focus {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #eef5fb;
+  background: var(--surface-soft);
 }
 
 .toolbar-filter {
@@ -452,7 +467,7 @@ textarea:focus {
   min-width: 860px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--surface-strong);
   overflow: hidden;
 }
 
@@ -468,7 +483,7 @@ textarea:focus {
 .room-column {
   position: relative;
   border-left: 1px solid var(--line);
-  background-image: linear-gradient(to bottom, transparent calc(var(--slot-height) - 1px), #e6eef7 1px);
+  background-image: linear-gradient(to bottom, transparent calc(var(--slot-height) - 1px), var(--line) 1px);
   background-position: 0 42px;
   background-size: 100% var(--slot-height);
 }
@@ -481,7 +496,7 @@ textarea:focus {
   place-items: center;
   min-height: 42px;
   border-bottom: 1px solid var(--line);
-  background: #eff6fc;
+  background: var(--surface-soft);
   font-weight: 900;
 }
 
@@ -508,33 +523,33 @@ textarea:focus {
   gap: 2px;
   min-height: 30px;
   overflow: hidden;
-  border: 1px solid rgba(11, 159, 208, 0.3);
+  border: 1px solid color-mix(in oklch, var(--cyan) 34%, var(--line));
   border-radius: 7px;
-  background: #eaf8fc;
+  background: color-mix(in oklch, var(--cyan) 11%, var(--surface));
   color: var(--ink);
   padding: 6px 8px;
   text-align: left;
-  box-shadow: 0 8px 18px rgba(35, 43, 45, 0.1);
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 10%, transparent);
 }
 
 .appointment-block.room-1 {
-  border-color: rgba(11, 159, 208, 0.42);
-  background: #e6f8fd;
+  border-color: color-mix(in oklch, var(--cyan) 44%, var(--line));
+  background: color-mix(in oklch, var(--cyan) 12%, var(--surface));
 }
 
 .appointment-block.room-2 {
-  border-color: rgba(131, 89, 221, 0.42);
-  background: #f2edff;
+  border-color: color-mix(in oklch, var(--purple) 42%, var(--line));
+  background: color-mix(in oklch, var(--purple) 12%, var(--surface));
 }
 
 .appointment-block.room-3 {
-  border-color: rgba(209, 27, 213, 0.38);
-  background: #fdeafd;
+  border-color: color-mix(in oklch, var(--magenta) 38%, var(--line));
+  background: color-mix(in oklch, var(--magenta) 10%, var(--surface));
 }
 
 .appointment-block.room-4 {
-  border-color: rgba(47, 115, 198, 0.38);
-  background: #edf5ff;
+  border-color: color-mix(in oklch, var(--blue) 38%, var(--line));
+  background: color-mix(in oklch, var(--blue) 11%, var(--surface));
 }
 
 .block-time,
@@ -603,7 +618,7 @@ textarea:focus {
   min-height: 38px;
   display: grid;
   place-items: center;
-  background: #eff6fc;
+  background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
@@ -616,16 +631,16 @@ textarea:focus {
   grid-template-rows: auto 1fr;
   gap: 6px;
   padding: 8px;
-  background: #fbfcff;
+  background: var(--surface);
 }
 
 .month-day.outside-month {
-  background: #f3f7fb;
-  color: #98a5b6;
+  background: color-mix(in oklch, var(--surface-soft) 76%, var(--surface));
+  color: color-mix(in oklch, var(--muted) 74%, var(--line));
 }
 
 .month-day.today {
-  background: #eef9fd;
+  background: color-mix(in oklch, var(--cyan) 10%, var(--surface));
 }
 
 .month-date {
@@ -640,7 +655,7 @@ textarea:focus {
 
 .month-day.today .month-date {
   background: var(--cyan);
-  color: #fbfcff;
+  color: var(--on-accent);
 }
 
 .month-events {
@@ -653,7 +668,7 @@ textarea:focus {
 .month-event {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #f6fbfe;
+  background: color-mix(in oklch, var(--cyan) 5%, var(--surface));
   color: var(--ink);
   min-height: 26px;
   padding: 4px 6px;
@@ -666,23 +681,23 @@ textarea:focus {
 }
 
 .month-event.room-1 {
-  border-color: rgba(11, 159, 208, 0.38);
-  background: #e6f8fd;
+  border-color: color-mix(in oklch, var(--cyan) 38%, var(--line));
+  background: color-mix(in oklch, var(--cyan) 12%, var(--surface));
 }
 
 .month-event.room-2 {
-  border-color: rgba(131, 89, 221, 0.38);
-  background: #f2edff;
+  border-color: color-mix(in oklch, var(--purple) 38%, var(--line));
+  background: color-mix(in oklch, var(--purple) 12%, var(--surface));
 }
 
 .month-event.room-3 {
-  border-color: rgba(209, 27, 213, 0.34);
-  background: #fdeafd;
+  border-color: color-mix(in oklch, var(--magenta) 34%, var(--line));
+  background: color-mix(in oklch, var(--magenta) 10%, var(--surface));
 }
 
 .month-event.room-4 {
-  border-color: rgba(47, 115, 198, 0.34);
-  background: #edf5ff;
+  border-color: color-mix(in oklch, var(--blue) 34%, var(--line));
+  background: color-mix(in oklch, var(--blue) 11%, var(--surface));
 }
 
 .day-column,
@@ -690,7 +705,7 @@ textarea:focus {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--surface-strong);
   overflow: hidden;
 }
 
@@ -700,7 +715,7 @@ textarea:focus {
   min-height: 52px;
   padding: 11px;
   border-bottom: 1px solid var(--line);
-  background: #eff6fc;
+  background: var(--surface-soft);
 }
 
 .column-heading strong {
@@ -725,7 +740,7 @@ textarea:focus {
   gap: 9px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: #fbfcff;
+  background: var(--surface);
   padding: 10px;
 }
 
@@ -761,6 +776,167 @@ textarea:focus {
   font-weight: 800;
 }
 
+.mobile-agenda-list,
+.mobile-month-list,
+.mobile-date-group {
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-month-list {
+  gap: 18px;
+}
+
+.mobile-date-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.mobile-date-heading h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.mobile-date-heading span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.mobile-appointment-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 7%, transparent);
+}
+
+.mobile-appointment-card.room-1 {
+  border-color: color-mix(in oklch, var(--cyan) 38%, var(--line));
+}
+
+.mobile-appointment-card.room-2 {
+  border-color: color-mix(in oklch, var(--purple) 38%, var(--line));
+}
+
+.mobile-appointment-card.room-3 {
+  border-color: color-mix(in oklch, var(--magenta) 34%, var(--line));
+}
+
+.mobile-appointment-card.room-4 {
+  border-color: color-mix(in oklch, var(--blue) 34%, var(--line));
+}
+
+.mobile-card-main,
+.mobile-delete-button {
+  border: 0;
+  border-radius: 0;
+}
+
+.mobile-card-main {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  min-height: 88px;
+  padding: 12px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.mobile-card-main:active {
+  background: color-mix(in oklch, var(--cyan) 7%, transparent);
+}
+
+.mobile-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-card-time {
+  color: var(--cyan-dark);
+  font-size: 0.8rem;
+  font-weight: 950;
+}
+
+.room-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  max-width: 48%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  padding: 0 8px;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-appointment-card.room-1 .room-badge {
+  border-color: color-mix(in oklch, var(--cyan) 32%, var(--line));
+  background: color-mix(in oklch, var(--cyan) 11%, var(--surface));
+}
+
+.mobile-appointment-card.room-2 .room-badge {
+  border-color: color-mix(in oklch, var(--purple) 30%, var(--line));
+  background: color-mix(in oklch, var(--purple) 11%, var(--surface));
+}
+
+.mobile-appointment-card.room-3 .room-badge {
+  border-color: color-mix(in oklch, var(--magenta) 28%, var(--line));
+  background: color-mix(in oklch, var(--magenta) 9%, var(--surface));
+}
+
+.mobile-appointment-card.room-4 .room-badge {
+  border-color: color-mix(in oklch, var(--blue) 30%, var(--line));
+  background: color-mix(in oklch, var(--blue) 10%, var(--surface));
+}
+
+.mobile-card-main h3 {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.mobile-card-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.mobile-delete-button {
+  min-width: 74px;
+  border-left: 1px solid var(--line);
+  background: color-mix(in oklch, var(--danger) 7%, var(--surface));
+  color: var(--danger);
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.mobile-delete-button:active {
+  background: var(--danger);
+  color: var(--on-accent);
+}
+
 /* Botão Flutuante (FAB) para Mobile */
 .fab-button {
   display: none;
@@ -773,11 +949,11 @@ textarea:focus {
   border: none;
   border-radius: 50%;
   background: var(--cyan);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(11, 159, 208, 0.4);
+  box-shadow: 0 12px 26px color-mix(in oklch, var(--cyan) 38%, transparent);
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease, background-color 0.2s ease;
@@ -811,7 +987,11 @@ textarea:focus {
 
 @media (max-width: 720px) {
   .app-shell {
-    padding: 12px;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      calc(92px + env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
   }
 
   .topbar {
@@ -819,15 +999,22 @@ textarea:focus {
     flex-direction: column;
     gap: 12px;
     margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 8px 0 10px;
+    background: color-mix(in oklch, var(--bg) 94%, transparent);
+    backdrop-filter: blur(18px);
   }
 
   .topbar-actions {
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr;
     align-items: center;
-    justify-content: space-between;
     width: 100%;
+    max-width: calc(100vw - 20px);
     gap: 8px;
+    min-width: 0;
   }
 
   .sync-status {
@@ -836,8 +1023,10 @@ textarea:focus {
   }
 
   .date-controls {
-    flex: 1;
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    width: calc(100vw - 20px);
+    min-width: 0;
   }
 
   .new-appointment-button {
@@ -846,6 +1035,8 @@ textarea:focus {
 
   .fab-button {
     display: flex;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .brand-logo {
@@ -863,6 +1054,9 @@ textarea:focus {
     align-items: stretch;
     flex-direction: column;
     gap: 12px;
+    border-radius: 12px;
+    background: color-mix(in oklch, var(--surface) 96%, transparent);
+    overflow: hidden;
   }
 
   .current-period {
@@ -891,6 +1085,7 @@ textarea:focus {
     align-items: stretch;
     flex-direction: column;
     gap: 10px;
+    min-width: 0;
   }
 
   .toolbar-filter {
@@ -902,21 +1097,31 @@ textarea:focus {
 
   .toolbar-filter select {
     flex: 1;
-    max-width: 200px;
+    max-width: none;
+    min-width: 0;
     min-height: 36px;
   }
 
-  .date-controls,
   .view-tabs {
-    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: calc(100vw - 44px);
+    max-width: calc(100vw - 44px);
+    min-width: 0;
   }
 
   .today-button,
   .tab-button {
     flex: 1;
-    min-height: 36px;
-    padding: 0 6px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 4px;
     font-size: 0.82rem;
+  }
+
+  .icon-button {
+    width: 44px;
+    min-height: 44px;
   }
 
   .field-grid,
@@ -940,13 +1145,32 @@ textarea:focus {
     left: 0;
     right: 0;
     width: 100%;
-    max-height: 85vh;
+    max-height: min(88vh, 760px);
     transform: translateY(0);
-    border-radius: 16px 16px 0 0;
+    border-radius: 18px 18px 0 0;
     border-bottom: none;
-    padding: 18px 14px 28px;
-    box-shadow: 0 -8px 26px rgba(20, 33, 49, 0.18);
+    padding: 18px 14px calc(28px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 26px color-mix(in oklch, var(--ink) 18%, transparent);
     animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .panel-header {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    margin: -18px -14px 14px;
+    padding: 16px 14px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .form-actions-row {
+    position: sticky;
+    bottom: calc(-28px - env(safe-area-inset-bottom));
+    margin: 4px -14px calc(-28px - env(safe-area-inset-bottom));
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
   }
 
   @keyframes slide-up {
@@ -976,13 +1200,13 @@ textarea:focus {
 }
 
 .room-column.drag-over {
-  background-color: rgba(11, 159, 208, 0.08) !important;
+  background-color: color-mix(in oklch, var(--cyan) 8%, transparent) !important;
 }
 
 .day-column.drag-over,
 .room-week-column.drag-over {
   border-color: var(--cyan) !important;
-  background-color: rgba(11, 159, 208, 0.05) !important;
+  background-color: color-mix(in oklch, var(--cyan) 6%, transparent) !important;
 }
 
 /* Botão de Excluir Vermelho no formulário */
@@ -993,7 +1217,7 @@ textarea:focus {
 
 .ghost-button.delete-button:hover {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--danger);
 }
 
@@ -1012,4 +1236,19 @@ textarea:focus {
 
 .is-hidden {
   display: none !important;
+}
+
+@media (pointer: coarse) {
+  .icon-button,
+  .today-button,
+  .ghost-button,
+  .primary-button,
+  .new-appointment-button,
+  .tab-button,
+  .card-action,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
 }
