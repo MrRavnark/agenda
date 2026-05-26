@@ -163,6 +163,7 @@ function ensureHeaders_(sheet) {
 
   if (!isMissingHeaders) {
     repairShiftedLegacyRows_(sheet);
+    generateMissingIds_(sheet);
     sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), 1), HEADERS.length).setNumberFormat("@");
     return;
   }
@@ -174,6 +175,7 @@ function ensureHeaders_(sheet) {
     sheet.setFrozenRows(1);
   }
 
+  generateMissingIds_(sheet);
   sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), 1), HEADERS.length).setNumberFormat("@");
 }
 
@@ -280,6 +282,38 @@ function repairShiftedLegacyRows_(sheet) {
 
   if (changed) {
     sheet.getRange(2, 1, repairedRows.length, HEADERS.length).setValues(repairedRows);
+  }
+}
+
+function generateMissingIds_(sheet) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return;
+  }
+
+  const range = sheet.getRange(2, 1, lastRow - 1, HEADERS.length);
+  const values = range.getValues();
+  const displayValues = range.getDisplayValues();
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const repairedRows = values.map((row, index) => {
+    const id = cleanText_(displayValues[index][0] || row[0]);
+    const patient = cleanText_(displayValues[index][1] || row[1]);
+    const date = cleanText_(displayValues[index][3] || row[3]);
+
+    if (!id && (patient || date)) {
+      row[0] = `row_${index + 2}_${Math.random().toString(36).slice(2, 6)}`;
+      row[8] = row[8] || now; // createdAt
+      row[9] = now; // updatedAt
+      changed = true;
+    }
+    return row;
+  });
+
+  if (changed) {
+    range.setValues(repairedRows);
   }
 }
 
