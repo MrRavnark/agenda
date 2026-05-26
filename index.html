@@ -1,1352 +1,151 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Clínica - Ocupação de Salas</title>
-    <!-- Tailwind CSS para estilização rápida e utilitária -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        clinical: {
-                            50: '#f4f7f6',
-                            100: '#e5ebe9',
-                            200: '#ccd8d4',
-                            300: '#a3bbb5',
-                            400: '#73958c',
-                            500: '#567a71',
-                            600: '#436158',
-                            700: '#384f48',
-                            800: '#2f423d',
-                            900: '#2a3a35',
-                            accent: '#c5a880', /* Dourado sutil para detalhes premium */
-                            accentHover: '#b5966c'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Estilos fluidos customizados para transições suaves */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .view-transition {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        /* Touch friendly sizing */
-        button, select, input {
-            min-height: 44px;
-        }
-    </style>
-</head>
-<body class="bg-clinical-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
-
-    <!-- Topo da Página / Header -->
-    <header class="bg-white border-b border-clinical-100 sticky top-0 z-30 px-4 py-3 sm:px-6">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-clinical-600 rounded-lg flex items-center justify-center text-white">
-                    <!-- SVG Icon: Clinica/Calendário -->
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-lg font-semibold text-slate-900 tracking-tight">Agenda Clínica</h1>
-                    <p class="text-xs text-slate-500">Ocupação da Aba "Agendamentos"</p>
-                </div>
-            </div>
-
-            <!-- Controles de Sincronização / Ações -->
-            <div class="flex items-center gap-2">
-                <button onclick="toggleSyncModal()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-clinical-200 text-clinical-700 bg-clinical-50 hover:bg-clinical-100 rounded-lg text-sm font-medium transition-colors">
-                    <svg class="w-4 h-4 text-clinical-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                    <span>Conectar Planilha</span>
-                    <span id="sync-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-500" title="Modo Local"></span>
-                </button>
-
-                <button onclick="openAppointmentModal()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-clinical-600 hover:bg-clinical-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Agendar</span>
-                </button>
-            </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agenda Espaço do Pensar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <img class="brand-logo" src="assets/logo-espaco-do-pensar.jpeg" alt="Espaço do Pensar" />
+          <div>
+            <p class="eyebrow">Espaço do Pensar</p>
+            <h1>Agenda clínica</h1>
+          </div>
         </div>
-    </header>
 
-    <!-- Sub-Header de Navegação & Filtros -->
-    <section class="bg-white border-b border-clinical-100 px-4 py-3 sm:px-6 z-20">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            <!-- Controles do Período -->
-            <div class="flex items-center justify-between lg:justify-start gap-4">
-                <div class="flex items-center gap-1 bg-clinical-50 p-1 rounded-lg border border-clinical-100">
-                    <button onclick="navigatePeriod(-1)" class="p-2 hover:bg-white rounded-md text-clinical-700 transition-colors" aria-label="Anterior">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <button onclick="goToToday()" class="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-clinical-700 hover:bg-white rounded-md transition-colors">
-                        Hoje
-                    </button>
-                    <button onclick="navigatePeriod(1)" class="p-2 hover:bg-white rounded-md text-clinical-700 transition-colors" aria-label="Próximo">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </div>
-                <h2 id="calendar-title" class="text-base sm:text-lg font-medium text-slate-800">Maio de 2026</h2>
+        <div class="topbar-actions">
+          <div class="sync-status" id="sync-status" data-state="local">Local</div>
+          <button class="new-appointment-button" type="button" id="new-appointment">
+            <span aria-hidden="true">+</span>
+            Novo atendimento
+          </button>
+
+          <div class="date-controls" aria-label="Navegação de datas">
+            <button class="icon-button" type="button" id="previous-date" title="Voltar">
+              <span aria-hidden="true">‹</span>
+            </button>
+            <button class="today-button" type="button" id="today-date">Hoje</button>
+            <button class="icon-button" type="button" id="next-date" title="Avançar">
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="schedule-form-panel is-hidden" aria-label="Cadastro de atendimento" aria-modal="true">
+          <div class="panel-header">
+            <h2 id="form-title">Novo atendimento</h2>
+            <div class="panel-actions">
+              <button class="ghost-button small" type="button" id="clear-form">Limpar</button>
+              <button class="ghost-button small" type="button" id="close-form">Fechar</button>
+            </div>
+          </div>
+
+          <form id="appointment-form" autocomplete="off">
+            <input type="hidden" id="appointment-id" />
+
+            <label>
+              <span>Paciente</span>
+              <input id="patient" name="patient" type="text" required placeholder="Nome do paciente" />
+            </label>
+
+            <label>
+              <span>Psicóloga</span>
+              <input id="psychologist" name="psychologist" type="text" required placeholder="Nome da profissional" />
+            </label>
+
+            <div class="field-grid">
+              <label>
+                <span>Data</span>
+                <input id="date" name="date" type="date" required />
+              </label>
+
+              <label>
+                <span>Sala</span>
+                <select id="room" name="room" required></select>
+              </label>
             </div>
 
-            <!-- Seletores de Visualização & Filtros Rápidos -->
-            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
-                <!-- Seletor de Sala (Filtro) -->
-                <select id="filter-room" onchange="renderActiveView()" class="px-3 py-1.5 bg-clinical-50 border border-clinical-100 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                    <option value="all">Todas as Salas</option>
-                    <option value="PM - Sala 1">PM - Sala 1</option>
-                    <option value="MF - Sala 2">MF - Sala 2</option>
-                    <option value="PM - Sala 3">PM - Sala 3</option>
-                    <option value="PM - Sala 4">PM - Sala 4</option>
+            <div class="field-grid">
+              <label>
+                <span>Início</span>
+                <input id="start" name="start" type="time" min="07:00" max="21:00" step="3600" required />
+              </label>
+
+              <label>
+                <span>Término</span>
+                <input id="end" name="end" type="time" min="08:00" max="22:00" step="3600" required />
+              </label>
+            </div>
+
+            <label>
+              <span>Observações</span>
+              <textarea id="notes" name="notes" rows="3" placeholder="Opcional"></textarea>
+            </label>
+
+            <div class="form-feedback" id="form-feedback" role="status" aria-live="polite"></div>
+
+            <button class="primary-button" type="submit" id="submit-appointment">Salvar atendimento</button>
+          </form>
+        </aside>
+
+        <section class="schedule-area" aria-label="Painel da agenda">
+          <div class="schedule-toolbar">
+            <div>
+              <p class="current-period" id="current-period"></p>
+              <div class="summary-strip" id="summary-strip"></div>
+            </div>
+
+            <div class="schedule-tools">
+              <label class="room-filter">
+                <span>Sala</span>
+                <select id="filter-room" name="filter-room">
+                  <option value="all">Todas</option>
                 </select>
+              </label>
 
-                <!-- Abas/Views -->
-                <div class="col-span-2 sm:col-span-1 flex bg-clinical-50 p-1 rounded-lg border border-clinical-100 gap-1">
-                    <button onclick="setView('day')" id="btn-view-day" class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-clinical-600 transition-colors">Dia</button>
-                    <button onclick="setView('week')" id="btn-view-week" class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-clinical-600 transition-colors">Semana</button>
-                    <button onclick="setView('month')" id="btn-view-month" class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-clinical-600 transition-colors">Mês</button>
-                    <button onclick="setView('rooms')" id="btn-view-rooms" class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-clinical-600 transition-colors">Salas</button>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- Área Principal de Conteúdo -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
-        
-        <!-- Alerta de Sincronização Ativa -->
-        <div id="sync-banner" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 flex items-center justify-between text-xs sm:text-sm">
-            <div class="flex items-center gap-2">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span>Conectado em tempo real com sua planilha Google!</span>
-            </div>
-            <button onclick="syncData()" class="font-semibold underline hover:text-emerald-950 transition-colors">Forçar Atualização</button>
-        </div>
-
-        <!-- Container Dinâmico das Views -->
-        <div id="calendar-viewport" class="bg-white rounded-xl border border-clinical-100 shadow-sm flex-1 overflow-hidden min-h-[450px] flex flex-col">
-            <!-- Renderizado dinamicamente pelo JS -->
-        </div>
-
-    </main>
-
-    <!-- Barra de Navegação Inferior para Mobile Quick Actions -->
-    <div class="sm:hidden fixed bottom-4 right-4 z-40">
-        <button onclick="openAppointmentModal()" class="w-14 h-14 bg-clinical-600 hover:bg-clinical-700 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-        </button>
-    </div>
-
-    <!-- MODAL: Novo / Editar Agendamento -->
-    <div id="appointment-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <!-- Cabeçalho Modal -->
-            <div class="px-6 py-4 bg-clinical-50 border-b border-clinical-100 flex items-center justify-between">
-                <div>
-                    <h3 id="modal-title" class="text-base font-semibold text-slate-900">Novo Agendamento</h3>
-                    <p class="text-xs text-slate-500">Os dados serão salvos diretamente na planilha</p>
-                </div>
-                <button onclick="closeAppointmentModal()" class="p-1 hover:bg-slate-200 rounded-full transition-colors">
-                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+              <div class="view-tabs" role="tablist" aria-label="Modo de visualização">
+                <button type="button" class="tab-button active" data-view="day" role="tab" aria-selected="true">
+                  Dia
                 </button>
-            </div>
-
-            <!-- Formulário -->
-            <form id="appointment-form" onsubmit="saveAppointment(event)" class="p-6 flex-1 overflow-y-auto space-y-4 custom-scrollbar">
-                <input type="hidden" id="appointment-id">
-                
-                <div>
-                    <label for="form-patient" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nome do Paciente</label>
-                    <input type="text" id="form-patient" required placeholder="Ex: Pietro Silva Barbosa Catena" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                </div>
-
-                <div>
-                    <label for="form-psychologist" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nome do(a) Psicólogo(a)</label>
-                    <input type="text" id="form-psychologist" required placeholder="Ex: Dra. Ana Costa" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                </div>
-
-                <div>
-                    <label for="form-room" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Sala de Atendimento</label>
-                    <select id="form-room" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                        <option value="PM - Sala 1">PM - Sala 1</option>
-                        <option value="MF - Sala 2">MF - Sala 2</option>
-                        <option value="PM - Sala 3">PM - Sala 3</option>
-                        <option value="PM - Sala 4">PM - Sala 4</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="form-date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Data</label>
-                        <input type="date" id="form-date" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                    </div>
-                    <div>
-                        <label for="form-start" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Horário (Início)</label>
-                        <input type="time" id="form-start" required min="07:00" max="22:00" step="1800" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                    </div>
-                </div>
-
-                <!-- Footer do Form -->
-                <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button type="button" id="btn-delete-appointment" onclick="deleteAppointment()" class="hidden px-4 py-2 border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg text-sm font-medium transition-colors">
-                        Excluir
-                    </button>
-                    <div class="flex items-center gap-2 ml-auto">
-                        <button type="button" onclick="closeAppointmentModal()" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="px-4 py-2 bg-clinical-600 hover:bg-clinical-700 text-white rounded-lg text-sm font-medium transition-colors">
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: Integração com Google Planilhas -->
-    <div id="sync-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <!-- Cabeçalho -->
-            <div class="px-6 py-4 bg-clinical-50 border-b border-clinical-100 flex items-center justify-between">
-                <div>
-                    <h3 class="text-base font-semibold text-slate-900">Sincronização Google Planilhas</h3>
-                    <p class="text-xs text-slate-500">Conectado à aba "Agendamentos"</p>
-                </div>
-                <button onclick="toggleSyncModal()" class="p-1 hover:bg-slate-200 rounded-full transition-colors">
-                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                <button type="button" class="tab-button" data-view="week" role="tab" aria-selected="false">
+                  Semana
                 </button>
+                <button type="button" class="tab-button" data-view="month" role="tab" aria-selected="false">
+                  Mês
+                </button>
+                <button type="button" class="tab-button" data-view="rooms" role="tab" aria-selected="false">
+                  Salas
+                </button>
+              </div>
             </div>
-
-            <!-- Conteúdo de Setup -->
-            <div class="p-6 flex-1 overflow-y-auto space-y-6 custom-scrollbar text-sm text-slate-700">
-                <div class="space-y-3">
-                    <p class="font-medium text-slate-950">Como configurar seu Google Apps Script:</p>
-                    <ol class="list-decimal pl-5 space-y-2 text-slate-600">
-                        <li>Na sua planilha, vá no menu superior em <strong class="text-slate-900">Extensões &gt; Apps Script</strong>.</li>
-                        <li>Substitua todo o código existente pelo código abaixo (ele já vem programado com o ID correto da sua planilha).</li>
-                        <li>Clique no botão de salvar (ícone de disquete) e depois clique em <strong class="text-slate-900">Implantar &gt; Nova implantação</strong>.</li>
-                        <li>Selecione o tipo <strong class="text-slate-900">App da Web</strong>, configure para executar como "Eu" e dê acesso a "Qualquer pessoa".</li>
-                        <li>Copie a <strong class="text-clinical-700 font-semibold">URL do App da Web</strong> gerada e cole no campo de texto abaixo para ativar a sincronização em tempo real.</li>
-                    </ol>
-                </div>
-
-                <!-- Campo de Endpoint -->
-                <div class="bg-clinical-50 p-4 rounded-xl border border-clinical-100 space-y-3">
-                    <label for="sync-endpoint" class="block text-xs font-bold text-slate-600 uppercase tracking-wider">URL do Web App Implantado:</label>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="url" id="sync-endpoint" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-clinical-400">
-                        <button onclick="saveSyncEndpoint()" class="px-4 py-2 bg-clinical-600 hover:bg-clinical-700 text-white rounded-lg text-sm font-semibold transition-colors">
-                            Salvar e Sincronizar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Template do Script -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Código Próprio para o Google Apps Script</span>
-                        <button onclick="copyAppsScriptCode()" class="text-xs text-clinical-600 font-semibold hover:underline">Copiar Código</button>
-                    </div>
-                    <pre id="script-code-block" class="bg-slate-900 text-slate-200 text-xs p-4 rounded-xl overflow-x-auto max-h-48 custom-scrollbar font-mono">
-/* Código customizado para leitura e gravação exata da sua aba "Agendamentos" */
-const SPREADSHEET_ID = "1k9eaBYaArmcPfi38HaYY48FXbPkCeKy7FVKyP3m-N-Q";
-const SHEET_NAME = "Agendamentos";
-
-const HEADERS = [
-  "id",
-  "patient",
-  "psychologist",
-  "date",
-  "start",
-  "end",
-  "room",
-  "notes",
-  "createdAt",
-  "updatedAt",
-];
-
-const ROOM_NAMES = {
-  "pm-1": "PM - Sala 1",
-  "pm-3": "PM - Sala 3",
-  "pm-4": "PM - Sala 4",
-  "mf-2": "MF - Sala 2",
-};
-
-function setup() {
-  getAppointmentsSheet_();
-}
-
-function doGet(e) {
-  return handleRequest_(e.parameter || {});
-}
-
-function doPost(e) {
-  const body = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
-  return handleRequest_({
-    action: body.action,
-    key: body.key,
-    payload: JSON.stringify(body.payload || {}),
-  });
-}
-
-function handleRequest_(params) {
-  let locked = false;
-  const lock = LockService.getScriptLock();
-
-  try {
-    const action = params.action || "list";
-    let result;
-
-    if (action === "list") {
-      result = { ok: true, appointments: listAppointments_() };
-    } else if (action === "save") {
-      lock.waitLock(10000);
-      locked = true;
-      result = saveAppointment_(JSON.parse(params.payload || "{}"));
-    } else if (action === "delete") {
-      lock.waitLock(10000);
-      locked = true;
-      result = deleteAppointment_(JSON.parse(params.payload || "{}"));
-    } else {
-      throw new Error("Acao desconhecida.");
-    }
-
-    return output_(result, params.callback);
-  } catch (error) {
-    return output_({ ok: false, message: error.message || "Erro inesperado." }, params.callback);
-  } finally {
-    if (locked) lock.releaseLock();
-  }
-}
-
-function saveAppointment_(payload) {
-  const sheet = getAppointmentsSheet_();
-  const currentAppointments = readAppointments_(sheet);
-  const appointment = sanitizeAppointment_(payload);
-  const existing = currentAppointments.find((item) => item.id === appointment.id);
-  const now = new Date().toISOString();
-
-  appointment.createdAt = existing ? existing.createdAt : now;
-  appointment.updatedAt = now;
-
-  validateAppointment_(appointment, currentAppointments);
-
-  const row = HEADERS.map((header) => appointment[header] || "");
-  const rowNumber = findAppointmentRow_(sheet, appointment.id);
-
-  if (rowNumber > 0) {
-    sheet.getRange(rowNumber, 1, 1, HEADERS.length).setValues([row]);
-  } else {
-    sheet.appendRow(row);
-  }
-
-  return { ok: true, appointments: listAppointments_() };
-}
-
-function deleteAppointment_(payload) {
-  const id = String(payload.id || "").trim();
-  const sheet = getAppointmentsSheet_();
-  const rowNumber = findAppointmentRow_(sheet, id);
-
-  if (rowNumber > 0) {
-    sheet.deleteRow(rowNumber);
-  }
-
-  return { ok: true, appointments: listAppointments_() };
-}
-
-function listAppointments_() {
-  return readAppointments_(getAppointmentsSheet_());
-}
-
-function getAppointmentsSheet_() {
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
-
-  if (!sheet) {
-    sheet = spreadsheet.insertSheet(SHEET_NAME);
-  }
-
-  ensureHeaders_(sheet);
-  return sheet;
-}
-
-function ensureHeaders_(sheet) {
-  if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-    sheet.setFrozenRows(1);
-    return;
-  }
-
-  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), HEADERS.length)).getDisplayValues()[0];
-
-  if (HEADERS.every((header, index) => headers[index] === header)) {
-    return;
-  }
-
-  if (headers.includes("Data") && headers.includes("Hora") && headers.includes("Paciente") && headers.includes("Sala")) {
-    migrateLegacySheet_(sheet, headers);
-    return;
-  }
-
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-  sheet.setFrozenRows(1);
-}
-
-function migrateLegacySheet_(sheet, headers) {
-  const lastRow = sheet.getLastRow();
-  const lastColumn = sheet.getLastColumn();
-  const dataColumn = headers.indexOf("Data");
-  const timeColumn = headers.indexOf("Hora");
-  const patientColumn = headers.indexOf("Paciente");
-  const roomColumn = headers.indexOf("Sala");
-  const now = new Date().toISOString();
-  const newRows = [];
-
-  if (lastRow > 1) {
-    const values = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
-    const displayValues = sheet.getRange(2, 1, lastRow - 1, lastColumn).getDisplayValues();
-
-    values.forEach((row, index) => {
-      const displayRow = displayValues[index];
-      const patient = String(displayRow[patientColumn] || row[patientColumn] || "").trim();
-
-      if (!patient) return;
-
-      const start = normalizeTime_(row[timeColumn], displayRow[timeColumn]);
-      const end = addOneHour_(start);
-
-      newRows.push([
-        `row_${index + 2}`,
-        patient,
-        "",
-        normalizeDate_(row[dataColumn], displayRow[dataColumn]),
-        start,
-        end,
-        normalizeRoom_(displayRow[roomColumn] || row[roomColumn]),
-        "",
-        now,
-        now,
-      ]);
-    });
-  }
-
-  sheet.clearContents();
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-
-  if (newRows.length) {
-    sheet.getRange(2, 1, newRows.length, HEADERS.length).setValues(newRows);
-  }
-
-  sheet.setFrozenRows(1);
-}
-
-function readAppointments_(sheet) {
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) {
-    return [];
-  }
-
-  return sheet
-    .getRange(2, 1, lastRow - 1, HEADERS.length)
-    .getDisplayValues()
-    .map((row) => ({
-      id: row[0],
-      patient: row[1],
-      psychologist: row[2],
-      date: row[3],
-      start: row[4],
-      end: row[5],
-      room: row[6],
-      notes: row[7],
-      createdAt: row[8],
-      updatedAt: row[9],
-    }))
-    .filter((item) => item.id);
-}
-
-function findAppointmentRow_(sheet, id) {
-  if (!id || sheet.getLastRow() < 2) {
-    return -1;
-  }
-
-  const ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getDisplayValues();
-  const index = ids.findIndex((row) => row[0] === id);
-
-  return index >= 0 ? index + 2 : -1;
-}
-
-function sanitizeAppointment_(payload) {
-  const appointment = {
-    id: String(payload.id || Utilities.getUuid()).trim(),
-    patient: String(payload.patient || "").trim(),
-    psychologist: String(payload.psychologist || "").trim(),
-    date: String(payload.date || "").trim(),
-    start: String(payload.start || "").trim(),
-    end: String(payload.end || "").trim(),
-    room: String(payload.room || "").trim(),
-    notes: String(payload.notes || "").trim(),
-  };
-
-  if (!appointment.patient || !appointment.psychologist || !appointment.date || !appointment.start || !appointment.end) {
-    throw new Error("Preencha paciente, psicologa, data e horario.");
-  }
-
-  if (!ROOM_NAMES[appointment.room]) {
-    throw new Error("Sala invalida.");
-  }
-
-  if (toMinutes_(appointment.end) <= toMinutes_(appointment.start)) {
-    throw new Error("O termino precisa ser depois do inicio.");
-  }
-
-  return appointment;
-}
-
-function validateAppointment_(appointment, appointments) {
-  const start = toMinutes_(appointment.start);
-  const end = toMinutes_(appointment.end);
-
-  const conflict = appointments.find((item) => {
-    if (item.id === appointment.id || item.date !== appointment.date) return false;
-
-    const overlaps = start < toMinutes_(item.end) && end > toMinutes_(item.start);
-    const sameRoom = item.room === appointment.room;
-    const sameProfessional =
-      String(item.psychologist || "").trim().toLowerCase() ===
-      String(appointment.psychologist || "").trim().toLowerCase();
-
-    return overlaps && (sameRoom || sameProfessional);
-  });
-
-  if (conflict) {
-    const reason =
-      conflict.room === appointment.room
-        ? `a sala ${ROOM_NAMES[conflict.room]}`
-        : `a psicologa ${conflict.psychologist}`;
-
-    throw new Error(`Conflito: ${reason} ja tem atendimento de ${conflict.start} as ${conflict.end}.`);
-  }
-}
-
-function output_(result, callback) {
-  const body = JSON.stringify(result);
-  const safeCallback = /^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callback || "")
-    ? callback
-    : "";
-
-  if (safeCallback) {
-    return ContentService.createTextOutput(`${safeCallback}(${body});`)
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-
-  return ContentService.createTextOutput(body)
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function normalizeDate_(value, displayValue) {
-  if (value instanceof Date) {
-    return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  }
-
-  const text = String(displayValue || value || "").trim();
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    return text;
-  }
-
-  const parts = text.split("/");
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-  }
-
-  return text;
-}
-
-function normalizeTime_(value, displayValue) {
-  if (value instanceof Date) {
-    return Utilities.formatDate(value, Session.getScriptTimeZone(), "HH:mm");
-  }
-
-  const text = String(displayValue || value || "").trim();
-
-  if (/^\d{1,2}:\d{2}$/.test(text)) {
-    const parts = text.split(":");
-    return `${parts[0].padStart(2, "0")}:${parts[1]}`;
-  }
-
-  if (/^\d{3,4}$/.test(text)) {
-    return `${text.slice(0, -2).padStart(2, "0")}:${text.slice(-2)}`;
-  }
-
-  return text;
-}
-
-function normalizeRoom_(value) {
-  const room = String(value || "").trim();
-
-  if (ROOM_NAMES[room]) {
-    return room;
-  }
-
-  const id = Object.keys(ROOM_NAMES).find(
-    (roomId) => ROOM_NAMES[roomId].toLowerCase() === room.toLowerCase()
-  );
-
-  return id || "pm-1";
-}
-
-function addOneHour_(time) {
-  const minutes = Math.min(toMinutes_(time) + 60, 22 * 60);
-  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-}
-
-function toMinutes_(time) {
-  const parts = String(time || "00:00").split(":").map(Number);
-  return parts[0] * 60 + parts[1];
-}
-                    </pre>
-                </div>
-            </div>
-        </div>
+          </div>
+
+          <div class="schedule-content" id="schedule-content"></div>
+        </section>
+      </main>
     </div>
 
-    <!-- Script de Gestão da Agenda -->
-    <script>
-        // Mapeamentos de salas para integração com a planilha
-        const roomKeys = {
-            "PM - Sala 1": "pm-1",
-            "PM - Sala 3": "pm-3",
-            "PM - Sala 4": "pm-4",
-            "MF - Sala 2": "mf-2"
-        };
-        const roomNames = {
-            "pm-1": "PM - Sala 1",
-            "pm-3": "PM - Sala 3",
-            "pm-4": "PM - Sala 4",
-            "mf-2": "MF - Sala 2"
-        };
-
-        // Estado Global da Aplicação
-        let state = {
-            currentDate: new Date(),
-            currentView: 'rooms', // 'day', 'week', 'month', 'rooms'
-            filterRoom: 'all',
-            syncEndpoint: localStorage.getItem('agenda_g_endpoint') || 'https://script.google.com/macros/s/AKfycbxw53Wglz-kQr7BJMQpJ6xzB9ATAi6etCATU6aijWOiQfOcIBZxLr6aPJr7IkkwPS1oUA/exec',
-            appointments: JSON.parse(localStorage.getItem('agenda_appointments')) || [
-                // Mock inicial idêntico aos dados reais para teste imediato
-                {
-                    id: "row_2",
-                    patient: "Pietro Silva Barbosa Catena",
-                    room: "PM - Sala 1",
-                    date: "2026-05-25",
-                    startTime: "10:00",
-                    endTime: "11:00"
-                },
-                {
-                    id: "row_3",
-                    patient: "Luiza Bernardi do Felix",
-                    room: "PM - Sala 3",
-                    date: "2026-05-25",
-                    startTime: "11:00",
-                    endTime: "12:00"
-                },
-                {
-                    id: "row_4",
-                    patient: "Lorenzo Coelho Vicente Serafim",
-                    room: "PM - Sala 4",
-                    date: "2026-05-25",
-                    startTime: "13:00",
-                    endTime: "14:00"
-                },
-                {
-                    id: "row_5",
-                    patient: "Maria Clara Rocha Baltazar Francisco",
-                    room: "MF - Sala 2",
-                    date: "2026-05-25",
-                    startTime: "14:00",
-                    endTime: "15:00"
-                }
-            ]
-        };
-
-        // Inicialização
-        window.addEventListener('DOMContentLoaded', () => {
-            if (!localStorage.getItem('agenda_g_endpoint')) {
-                localStorage.setItem('agenda_g_endpoint', state.syncEndpoint);
-            }
-            updateSyncUI();
-            setView(state.currentView);
-            syncData(); // Inicia conexão
-        });
-
-        function formatLocalDate(dateObj) {
-            return dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
-
-        function getStartOfWeek(date) {
-            const tempDate = new Date(date);
-            const day = tempDate.getDay();
-            const diff = tempDate.getDate() - day + (day === 0 ? -6 : 1); // Segunda como início
-            return new Date(tempDate.setDate(diff));
-        }
-
-        function setView(viewName) {
-            state.currentView = viewName;
-            
-            ['day', 'week', 'month', 'rooms'].forEach(v => {
-                const btn = document.getElementById(`btn-view-${v}`);
-                if (v === viewName) {
-                    btn.classList.remove('text-clinical-600', 'hover:bg-clinical-100');
-                    btn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
-                } else {
-                    btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
-                    btn.classList.add('text-clinical-600', 'hover:bg-clinical-100');
-                }
-            });
-
-            renderActiveView();
-        }
-
-        function renderActiveView() {
-            const viewport = document.getElementById('calendar-viewport');
-            const filterRoom = document.getElementById('filter-room').value;
-            state.filterRoom = filterRoom;
-
-            let filteredAppointments = state.appointments;
-            if (filterRoom !== 'all') {
-                filteredAppointments = state.appointments.filter(app => app.room === filterRoom);
-            }
-
-            updateHeaderTitle();
-
-            if (state.currentView === 'day') {
-                renderDayView(viewport, filteredAppointments);
-            } else if (state.currentView === 'week') {
-                renderWeekView(viewport, filteredAppointments);
-            } else if (state.currentView === 'month') {
-                renderMonthView(viewport, filteredAppointments);
-            } else if (state.currentView === 'rooms') {
-                renderRoomsView(viewport, state.appointments); // Sempre mostra comparação lado a lado
-            }
-        }
-
-        function updateHeaderTitle() {
-            const titleEl = document.getElementById('calendar-title');
-            if (state.currentView === 'day' || state.currentView === 'rooms') {
-                titleEl.textContent = formatLocalDate(state.currentDate);
-            } else if (state.currentView === 'week') {
-                const start = getStartOfWeek(state.currentDate);
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                titleEl.textContent = `${start.getDate()} a ${end.getDate()} de ${start.toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'})}`;
-            } else if (state.currentView === 'month') {
-                titleEl.textContent = state.currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-            }
-        }
-
-        function navigatePeriod(direction) {
-            const d = state.currentDate;
-            if (state.currentView === 'day' || state.currentView === 'rooms') {
-                d.setDate(d.getDate() + direction);
-            } else if (state.currentView === 'week') {
-                d.setDate(d.getDate() + (direction * 7));
-            } else if (state.currentView === 'month') {
-                d.setMonth(d.getMonth() + direction);
-            }
-            state.currentDate = new Date(d);
-            renderActiveView();
-        }
-
-        function goToToday() {
-            state.currentDate = new Date();
-            renderActiveView();
-        }
-
-        /* ---------------- VIEW: DIA ---------------- */
-        function renderDayView(container, appointments) {
-            const targetDateStr = state.currentDate.toISOString().split('T')[0];
-            const dayAppointments = appointments.filter(app => app.date === targetDateStr);
-            dayAppointments.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-            let html = `
-                <div class="flex-1 flex flex-col h-full overflow-hidden">
-                    <div class="p-4 bg-slate-50 border-b border-clinical-100 flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        <span>Ocupação do Dia (${targetDateStr.split('-').reverse().join('/')})</span>
-                        <span>${dayAppointments.length} reserva(s)</span>
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-            `;
-
-            if (dayAppointments.length === 0) {
-                html += `
-                    <div class="flex flex-col items-center justify-center py-20 text-slate-400">
-                        <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p class="text-sm">Nenhum agendamento para este dia.</p>
-                        <button onclick="openAppointmentModal(null, '${targetDateStr}')" class="mt-4 text-xs font-semibold text-clinical-600 hover:underline">Adicionar Registro</button>
-                    </div>
-                `;
-            } else {
-                dayAppointments.forEach(app => {
-                    html += `
-                        <div onclick="openAppointmentModal('${app.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-clinical-100 rounded-xl hover:shadow-md transition-shadow cursor-pointer gap-3 hover:border-clinical-300">
-                            <div class="flex items-center gap-4">
-                                <div class="px-3 py-2 bg-clinical-50 text-clinical-800 rounded-lg text-center min-w-[70px]">
-                                    <span class="block text-[10px] font-semibold tracking-wide uppercase">Hora</span>
-                                    <span class="text-sm font-bold">${app.startTime}</span>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-slate-900">${app.patient}</h4>
-                                    <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                        <span class="px-2 py-0.5 bg-clinical-100 text-clinical-800 rounded text-xs font-semibold">${app.room}</span>
-                                        ${app.psychologist ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded text-xs font-medium">Psicólogo(a): ${app.psychologist}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-auto text-xs text-slate-400">
-                                <span>Ver/Editar</span>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-
-        /* ---------------- VIEW: SEMANA ---------------- */
-        function renderWeekView(container, appointments) {
-            const startOfWeek = getStartOfWeek(state.currentDate);
-            const daysOfWeek = [];
-            
-            for (let i = 0; i < 7; i++) {
-                const day = new Date(startOfWeek);
-                day.setDate(startOfWeek.getDate() + i);
-                daysOfWeek.push(day);
-            }
-
-            let html = `
-                <div class="flex-1 flex flex-col h-full overflow-hidden">
-                    <div class="grid grid-cols-7 border-b border-clinical-100 bg-slate-50 text-center py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            `;
-
-            daysOfWeek.forEach(day => {
-                const isToday = day.toDateString() === new Date().toDateString();
-                html += `
-                    <div class="px-1 py-1.5 ${isToday ? 'bg-clinical-100 rounded-md text-clinical-900 font-bold' : ''}">
-                        <span class="block text-[10px] sm:text-xs opacity-75">${day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span>
-                        <span class="text-sm sm:text-base">${day.getDate()}</span>
-                    </div>
-                `;
-            });
-
-            html += `
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-2 sm:p-4 grid grid-cols-7 gap-2 custom-scrollbar min-h-[400px]">
-            `;
-
-            daysOfWeek.forEach(day => {
-                const dateStr = day.toISOString().split('T')[0];
-                const dayApps = appointments.filter(app => app.date === dateStr);
-                dayApps.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-                html += `<div class="flex flex-col gap-1.5 min-h-[300px] border-r border-dashed border-slate-100 last:border-r-0 px-1">`;
-                
-                if (dayApps.length === 0) {
-                    html += `
-                        <div onclick="openAppointmentModal(null, '${dateStr}')" class="flex-1 rounded-lg border border-dashed border-slate-200 hover:border-clinical-400 transition-colors flex items-center justify-center cursor-pointer min-h-[80px]">
-                            <span class="text-xs text-slate-300 font-bold">+</span>
-                        </div>
-                    `;
-                } else {
-                    dayApps.forEach(app => {
-                        html += `
-                            <div onclick="openAppointmentModal('${app.id}')" class="p-2 bg-clinical-50 hover:bg-clinical-100 border border-clinical-200 rounded-lg text-left cursor-pointer transition-colors shadow-sm relative group overflow-hidden">
-                                <span class="absolute left-0 top-0 bottom-0 w-1 bg-clinical-500"></span>
-                                <div class="text-[10px] font-bold text-slate-800 tracking-tight leading-tight truncate" title="${app.patient}">${app.patient}</div>
-                                <div class="text-[9px] text-slate-500 mt-0.5 leading-none">${app.startTime} ${app.psychologist ? `• ${app.psychologist}` : ''}</div>
-                                <div class="text-[8px] text-clinical-600 font-medium mt-1 uppercase tracking-wider truncate">${app.room}</div>
-                            </div>
-                        `;
-                    });
-                    
-                    html += `
-                        <button onclick="openAppointmentModal(null, '${dateStr}')" class="py-1 border border-dashed border-slate-200 hover:border-clinical-400 text-slate-400 text-[10px] hover:text-clinical-700 transition-colors rounded-md font-medium text-center">
-                            + Nova
-                        </button>
-                    `;
-                }
-                
-                html += `</div>`;
-            });
-
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-
-        /* ---------------- VIEW: MÊS ---------------- */
-        function renderMonthView(container, appointments) {
-            const year = state.currentDate.getFullYear();
-            const month = state.currentDate.getMonth();
-            
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            
-            let startDayOffset = firstDay.getDay() - 1;
-            if (startDayOffset < 0) startDayOffset = 6;
-
-            const totalDays = lastDay.getDate();
-            const daysArray = [];
-
-            for (let i = startDayOffset; i > 0; i--) {
-                const prevDate = new Date(year, month, 1 - i);
-                daysArray.push({ dateObj: prevDate, isCurrentMonth: false });
-            }
-
-            for (let i = 1; i <= totalDays; i++) {
-                daysArray.push({ dateObj: new Date(year, month, i), isCurrentMonth: true });
-            }
-
-            const remaining = 42 - daysArray.length;
-            for (let i = 1; i <= remaining; i++) {
-                daysArray.push({ dateObj: new Date(year, month + 1, i), isCurrentMonth: false });
-            }
-
-            let html = `
-                <div class="flex-1 flex flex-col h-full overflow-hidden">
-                    <div class="grid grid-cols-7 border-b border-clinical-100 bg-slate-50 text-center py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
-                    </div>
-                    <div class="flex-1 grid grid-cols-7 grid-rows-6 p-2 sm:p-4 gap-1 sm:gap-2 overflow-y-auto custom-scrollbar">
-            `;
-
-            daysArray.forEach(dayItem => {
-                const dateStr = dayItem.dateObj.toISOString().split('T')[0];
-                const dayApps = appointments.filter(app => app.date === dateStr);
-                const isToday = dayItem.dateObj.toDateString() === new Date().toDateString();
-
-                html += `
-                    <div onclick="openAppointmentModal(null, '${dateStr}')" class="min-h-[60px] sm:min-h-[80px] p-1.5 sm:p-2 border border-slate-100 rounded-lg hover:border-clinical-400 transition-colors cursor-pointer flex flex-col justify-between ${dayItem.isCurrentMonth ? 'bg-white' : 'bg-slate-50 opacity-40'}">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-semibold ${isToday ? 'bg-clinical-600 text-white w-5 h-5 rounded-full flex items-center justify-center font-bold' : 'text-slate-600'}">
-                                ${dayItem.dateObj.getDate()}
-                            </span>
-                            ${dayApps.length > 0 ? `<span class="w-1.5 h-1.5 rounded-full bg-clinical-500"></span>` : ''}
-                        </div>
-                        
-                        <div class="mt-2">
-                            ${dayApps.length > 0 ? `
-                                <div class="bg-clinical-50 border border-clinical-200 rounded px-1 py-0.5 text-[8px] sm:text-[10px] font-medium text-clinical-800 text-center truncate">
-                                    ${dayApps.length} Atend.
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-
-        /* ---------------- VIEW: COMPARAÇÃO DE SALAS ---------------- */
-        function renderRoomsView(container, appointments) {
-            const targetDateStr = state.currentDate.toISOString().split('T')[0];
-            const rooms = ['PM - Sala 1', 'MF - Sala 2', 'PM - Sala 3', 'PM - Sala 4'];
-            const hourlyBlocks = [
-                '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-                '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
-            ];
-
-            let html = `
-                <div class="flex-1 flex flex-col h-full overflow-hidden">
-                    <div class="grid grid-cols-5 border-b border-clinical-100 bg-slate-50 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                        <div class="text-left pl-4">Horário</div>
-                        <div class="border-l border-clinical-100">PM - Sala 1</div>
-                        <div class="border-l border-clinical-100">MF - Sala 2</div>
-                        <div class="border-l border-clinical-100">PM - Sala 3</div>
-                        <div class="border-l border-clinical-100">PM - Sala 4</div>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
-            `;
-
-            hourlyBlocks.forEach(hour => {
-                html += `
-                    <div class="grid grid-cols-5 min-h-[64px] items-stretch">
-                        <div class="flex items-center pl-4 text-xs font-semibold text-slate-500 bg-slate-50/50">
-                            ${hour}
-                        </div>
-                `;
-
-                rooms.forEach(room => {
-                    const currentHourInt = parseInt(hour.split(':')[0]);
-                    
-                    const roomAppInHour = appointments.find(app => {
-                        if (app.date !== targetDateStr || app.room !== room) return false;
-                        const appStartHour = parseInt(app.startTime.split(':')[0]);
-                        const appEndHour = parseInt(app.endTime.split(':')[0]);
-                        return currentHourInt >= appStartHour && currentHourInt < appEndHour;
-                    });
-
-                    if (roomAppInHour) {
-                        const isStart = roomAppInHour.startTime.startsWith(hour);
-                        html += `
-                            <div onclick="openAppointmentModal('${roomAppInHour.id}')" class="border-l border-slate-100 p-2 bg-clinical-50/75 hover:bg-clinical-100 transition-colors cursor-pointer flex flex-col justify-center relative overflow-hidden select-none">
-                                <span class="absolute left-0 top-0 bottom-0 w-1 bg-clinical-500"></span>
-                                ${isStart ? `
-                                    <div class="text-[11px] font-bold text-slate-800 leading-tight truncate" title="${roomAppInHour.patient}">${roomAppInHour.patient}</div>
-                                    <div class="text-[9px] text-slate-500 leading-none mt-0.5">${roomAppInHour.startTime} ${roomAppInHour.psychologist ? `• ${roomAppInHour.psychologist}` : ''}</div>
-                                ` : `
-                                    <div class="text-[9px] text-slate-400 italic">Ocupado</div>
-                                `}
-                            </div>
-                        `;
-                    } else {
-                        html += `
-                            <div onclick="quickCreate('${targetDateStr}', '${room}', '${hour}')" class="border-l border-slate-100 p-2 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-center justify-center group">
-                                <span class="text-xs text-slate-300 opacity-0 group-hover:opacity-100 font-semibold">+ Reservar</span>
-                            </div>
-                        `;
-                    }
-                });
-
-                html += `</div>`;
-            });
-
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-
-        function quickCreate(dateStr, room, hourStr) {
-            openAppointmentModal(null, dateStr, room, hourStr);
-        }
-
-        /* ---------------- GESTÃO DE MODAIS E REGISTRO ---------------- */
-        function openAppointmentModal(id = null, dateStr = null, room = null, start = null) {
-            const modal = document.getElementById('appointment-modal');
-            const form = document.getElementById('appointment-form');
-            const titleEl = document.getElementById('modal-title');
-            const deleteBtn = document.getElementById('btn-delete-appointment');
-
-            form.reset();
-            document.getElementById('appointment-id').value = '';
-
-            if (id) {
-                const app = state.appointments.find(a => a.id === id);
-                if (app) {
-                    titleEl.textContent = "Editar Agendamento";
-                    deleteBtn.classList.remove('hidden');
-                    
-                    document.getElementById('appointment-id').value = app.id;
-                    document.getElementById('form-patient').value = app.patient;
-                    document.getElementById('form-psychologist').value = app.psychologist || '';
-                    document.getElementById('form-room').value = app.room;
-                    document.getElementById('form-date').value = app.date;
-                    document.getElementById('form-start').value = app.startTime;
-                }
-            } else {
-                titleEl.textContent = "Novo Agendamento";
-                deleteBtn.classList.add('hidden');
-                
-                document.getElementById('form-psychologist').value = '';
-                document.getElementById('form-date').value = dateStr || state.currentDate.toISOString().split('T')[0];
-                if (room) document.getElementById('form-room').value = room;
-                if (start) document.getElementById('form-start').value = start;
-            }
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeAppointmentModal() {
-            document.getElementById('appointment-modal').classList.add('hidden');
-        }
-
-        function saveAppointment(e) {
-            e.preventDefault();
-
-            const id = document.getElementById('appointment-id').value;
-            const patient = document.getElementById('form-patient').value.trim();
-            const psychologist = document.getElementById('form-psychologist').value.trim();
-            const room = document.getElementById('form-room').value;
-            const date = document.getElementById('form-date').value;
-            const startTime = document.getElementById('form-start').value;
-
-            // Fim de consulta fictício (+1h) para fins do calendário gráfico
-            let endTime = "18:00";
-            const timeParts = startTime.split(':');
-            if (timeParts.length >= 2) {
-                const nextHour = (parseInt(timeParts[0], 10) + 1) % 24;
-                endTime = String(nextHour).padStart(2, '0') + ":" + timeParts[1];
-            }
-
-            // Checa conflitos de reserva
-            const hasConflict = state.appointments.some(app => {
-                if (app.id === id) return false;
-                return (app.date === date && app.room === room && app.startTime === startTime);
-            });
-
-            if (hasConflict) {
-                alert(`Conflito: A ${room} já possui agendamento exatamente às ${startTime} neste dia!`);
-                return;
-            }
-
-            const appPayload = {
-                id: id || ("row_" + Date.now()),
-                patient: patient,
-                psychologist: psychologist,
-                date: date,
-                start: startTime,
-                end: endTime,
-                room: roomKeys[room] || room,
-                notes: ""
-            };
-
-            if (id) {
-                const index = state.appointments.findIndex(app => app.id === id);
-                if (index !== -1) {
-                    state.appointments[index] = { id, patient, psychologist, room, date, startTime, endTime };
-                }
-            } else {
-                const newApp = {
-                    id: appPayload.id,
-                    patient,
-                    psychologist,
-                    room,
-                    date,
-                    startTime,
-                    endTime
-                };
-                state.appointments.push(newApp);
-            }
-
-            saveToLocalStorage();
-            renderActiveView();
-            closeAppointmentModal();
-            pushDataToGoogleSheets('save', appPayload);
-        }
-
-        function deleteAppointment() {
-            const id = document.getElementById('appointment-id').value;
-            if (!id) return;
-
-            if (confirm("Confirmar a exclusão deste agendamento na planilha?")) {
-                state.appointments = state.appointments.filter(app => app.id !== id);
-                saveToLocalStorage();
-                renderActiveView();
-                closeAppointmentModal();
-                pushDataToGoogleSheets('delete', { id: id });
-            }
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('agenda_appointments', JSON.stringify(state.appointments));
-        }
-
-        /* ---------------- INTEGRAÇÃO GOOGLE PLANILHAS ---------------- */
-        function toggleSyncModal() {
-            const modal = document.getElementById('sync-modal');
-            modal.classList.toggle('hidden');
-            if (!modal.classList.contains('hidden')) {
-                document.getElementById('sync-endpoint').value = state.syncEndpoint;
-            }
-        }
-
-        function saveSyncEndpoint() {
-            const endpoint = document.getElementById('sync-endpoint').value.trim();
-            state.syncEndpoint = endpoint;
-            localStorage.setItem('agenda_g_endpoint', endpoint);
-            updateSyncUI();
-            toggleSyncModal();
-            syncData();
-        }
-
-        function updateSyncUI() {
-            const indicator = document.getElementById('sync-indicator');
-            const banner = document.getElementById('sync-banner');
-
-            if (state.syncEndpoint) {
-                indicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-                banner.classList.remove('hidden');
-            } else {
-                indicator.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
-                banner.classList.add('hidden');
-            }
-        }
-
-        function syncData() {
-            if (!state.syncEndpoint) return;
-
-            fetch(state.syncEndpoint)
-                .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        state.appointments = data.map((item, index) => {
-                            return {
-                                id: item.id || ("row_" + (index + 2)),
-                                patient: item.patient || "",
-                                psychologist: item.psychologist || "",
-                                room: item.room || "",
-                                date: item.date || "",
-                                startTime: item.startTime || item.start || "",
-                                endTime: item.endTime || item.end || "",
-                                notes: item.notes || ""
-                            };
-                        });
-                        saveToLocalStorage();
-                        renderActiveView();
-                    } else if (data && data.ok && Array.isArray(data.appointments)) {
-                        const rawApps = data.appointments;
-                        const startIdx = (rawApps.length > 0 && (rawApps[0].id === "Data" || rawApps[0].patient === "Hora")) ? 1 : 0;
-                        
-                        state.appointments = rawApps.slice(startIdx).map((item, index) => {
-                            if ('start' in item) {
-                                // Novo Google Apps Script Schema
-                                return {
-                                    id: item.id || ("row_" + (index + 2)),
-                                    patient: item.patient || "",
-                                    psychologist: item.psychologist || "",
-                                    room: roomNames[item.room] || item.room || "",
-                                    date: item.date || "",
-                                    startTime: item.start || "",
-                                    endTime: item.end || "",
-                                    notes: item.notes || ""
-                                };
-                            } else if ('psychologist' in item) {
-                                // Transição ou custom script legado:
-                                let formattedDate = "";
-                                if (item.id) {
-                                    const parts = String(item.id).split('/');
-                                    if (parts.length === 3) {
-                                        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                                    } else {
-                                        formattedDate = String(item.id);
-                                    }
-                                }
-                                
-                                const startTime = item.patient || "";
-                                let endTime = "";
-                                if (startTime) {
-                                    const timeParts = String(startTime).split(':');
-                                    if (timeParts.length >= 2) {
-                                        const nextHour = (parseInt(timeParts[0], 10) + 1) % 24;
-                                        endTime = String(nextHour).padStart(2, '0') + ":" + timeParts[1];
-                                    }
-                                }
-                                if (!endTime) endTime = "18:00";
-
-                                return {
-                                    id: "row_" + (index + 2),
-                                    patient: item.psychologist || "",
-                                    psychologist: "",
-                                    room: item.date || "",
-                                    date: formattedDate,
-                                    startTime: startTime,
-                                    endTime: endTime,
-                                    notes: ""
-                                };
-                            } else {
-                                // Fallback
-                                return {
-                                    id: item.id || ("row_" + (index + 2)),
-                                    patient: item.patient || "",
-                                    psychologist: item.psychologist || "",
-                                    room: item.room || "",
-                                    date: item.date || "",
-                                    startTime: item.startTime || "",
-                                    endTime: item.endTime || "",
-                                    notes: item.notes || ""
-                                };
-                            }
-                        });
-                        saveToLocalStorage();
-                        renderActiveView();
-                    }
-                })
-                .catch(err => {
-                    console.error("Erro na sincronização:", err);
-                });
-        }
-
-        function pushDataToGoogleSheets(action, payload) {
-            if (!state.syncEndpoint) return;
-
-            fetch(state.syncEndpoint, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: action,
-                    payload: payload
-                })
-            })
-            .then(() => {
-                console.log(`Planilha sincronizada! Ação: ${action}`);
-                setTimeout(syncData, 1500); // Recarrega os dados da planilha após 1.5s
-            })
-            .catch(err => {
-                console.error("Erro ao sincronizar com Google Sheets:", err);
-            });
-        }
-
-        function copyAppsScriptCode() {
-            const code = document.getElementById('script-code-block').innerText;
-            const textarea = document.createElement('textarea');
-            textarea.value = code;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            alert("Código copiado! Insira-o no editor de Apps Script da sua planilha.");
-        }
-    </script>
-</body>
+    <template id="appointment-template">
+      <article class="appointment-card">
+        <div class="appointment-main">
+          <p class="appointment-time"></p>
+          <h3 class="appointment-patient"></h3>
+          <p class="appointment-meta"></p>
+        </div>
+        <div class="appointment-actions">
+          <button type="button" class="card-action edit" title="Editar atendimento">Editar</button>
+          <button type="button" class="card-action delete" title="Excluir atendimento">Excluir</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>
