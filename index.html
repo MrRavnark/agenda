@@ -90,7 +90,10 @@
 
             <div class="form-feedback" id="form-feedback" role="status" aria-live="polite"></div>
 
-            <button class="primary-button" type="submit" id="submit-appointment">Salvar atendimento</button>
+            <div class="form-actions-row">
+              <button class="primary-button" type="submit" id="submit-appointment">Salvar atendimento</button>
+              <button class="ghost-button delete-button is-hidden" type="button" id="delete-appointment">Excluir</button>
+            </div>
           </form>
         </aside>
 
@@ -144,6 +147,10 @@
         </div>
       </article>
     </template>
+
+    <button class="fab-button" id="fab-new-appointment" title="Novo atendimento">
+      <span>+</span>
+    </button>
 
     <script src="config.js"></script>
     <script src="app.js"></script>

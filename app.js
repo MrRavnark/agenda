@@ -33,6 +33,7 @@ const elements = {
   notes: document.querySelector("#notes"),
   feedback: document.querySelector("#form-feedback"),
   submit: document.querySelector("#submit-appointment"),
+  deleteBtn: document.querySelector("#delete-appointment"),
   clearForm: document.querySelector("#clear-form"),
   closeForm: document.querySelector("#close-form"),
   previousDate: document.querySelector("#previous-date"),
@@ -44,6 +45,7 @@ const elements = {
   syncStatus: document.querySelector("#sync-status"),
   filterRoom: document.querySelector("#filter-room"),
   newAppointment: document.querySelector("#new-appointment"),
+  fabNewAppointment: document.querySelector("#fab-new-appointment"),
   appointmentTemplate: document.querySelector("#appointment-template"),
   tabs: Array.from(document.querySelectorAll(".tab-button")),
 };
@@ -71,11 +73,24 @@ function initialise() {
   elements.form.addEventListener("submit", handleSubmit);
   elements.clearForm.addEventListener("click", resetForm);
   elements.closeForm.addEventListener("click", closeFormPanel);
+  elements.deleteBtn.addEventListener("click", () => {
+    const id = elements.appointmentId.value;
+    if (id) {
+      deleteAppointment(id);
+    }
+  });
   elements.newAppointment.addEventListener("click", () => {
     resetForm();
     openFormPanel();
     elements.patient.focus();
   });
+  if (elements.fabNewAppointment) {
+    elements.fabNewAppointment.addEventListener("click", () => {
+      resetForm();
+      openFormPanel();
+      elements.patient.focus();
+    });
+  }
   elements.previousDate.addEventListener("click", () => moveDate(-1));
   elements.nextDate.addEventListener("click", () => moveDate(1));
   elements.todayDate.addEventListener("click", () => {
@@ -91,6 +106,11 @@ function initialise() {
 
   elements.start.addEventListener("change", suggestEndTime);
   elements.filterRoom.addEventListener("change", render);
+  window.addEventListener("resize", () => {
+    if (currentView === "day") {
+      render();
+    }
+  });
 
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -194,6 +214,7 @@ function resetForm(clearMessage = true) {
   elements.appointmentId.value = "";
   elements.formTitle.textContent = "Novo atendimento";
   elements.submit.textContent = "Salvar atendimento";
+  elements.deleteBtn.classList.add("is-hidden");
   elements.date.value = selectedDate;
   elements.start.value = "08:00";
   elements.end.value = "09:00";
@@ -220,6 +241,7 @@ function editAppointment(id) {
   elements.notes.value = appointment.notes;
   elements.formTitle.textContent = "Editar atendimento";
   elements.submit.textContent = "Atualizar atendimento";
+  elements.deleteBtn.classList.remove("is-hidden");
   selectedDate = appointment.date;
   showFeedback("", "success");
   render();
@@ -230,11 +252,13 @@ function editAppointment(id) {
 function openFormPanel() {
   elements.formPanel.classList.remove("is-hidden");
   elements.appShell.classList.add("form-open");
+  document.body.style.overflow = "hidden";
 }
 
 function closeFormPanel() {
   elements.formPanel.classList.add("is-hidden");
   elements.appShell.classList.remove("form-open");
+  document.body.style.overflow = "";
 }
 
 async function deleteAppointment(id) {
@@ -251,6 +275,7 @@ async function deleteAppointment(id) {
   try {
     setSyncStatus("Excluindo...", "loading");
     appointments = await removeAppointment(id);
+    closeFormPanel();
     render();
     setStorageStatus();
   } catch (error) {
@@ -343,14 +368,21 @@ function renderDayView() {
   const wrap = document.createElement("div");
   wrap.className = "day-grid-wrap";
 
+  const isMobile = window.innerWidth < 720;
+  const timeColWidth = isMobile ? 50 : 64;
+  const colMinWidth = isMobile ? 140 : 190;
+  const minGridWidth = isMobile ? (timeColWidth + visibleRooms.length * 140) : (timeColWidth + visibleRooms.length * 220);
+
   const grid = document.createElement("div");
   grid.className = "day-grid";
-  grid.style.gridTemplateColumns = `64px repeat(${visibleRooms.length}, minmax(190px, 1fr))`;
-  grid.style.minWidth = `${64 + visibleRooms.length * 220}px`;
+  grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, minmax(${colMinWidth}px, 1fr))`;
+  grid.style.minWidth = `${minGridWidth}px`;
 
   const timeColumn = document.createElement("div");
   timeColumn.className = "time-column";
-  timeColumn.append(createHeaderCell("Horário", "time-head"));
+  
+  const headerText = isMobile ? "Hora" : "Horário";
+  timeColumn.append(createHeaderCell(headerText, "time-head"));
 
   for (let hour = 7; hour < 22; hour += 1) {
     const slot = document.createElement("div");
@@ -365,6 +397,64 @@ function renderDayView() {
     const column = document.createElement("div");
     column.className = "room-column";
     column.append(createHeaderCell(room.name));
+
+    // Drag and Drop
+    column.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", () => {
+      column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      column.classList.remove("drag-over");
+      
+      const id = e.dataTransfer.getData("text/plain");
+      const app = appointments.find((item) => item.id === id);
+      if (!app) return;
+
+      const rect = column.getBoundingClientRect();
+      const y = e.clientY - rect.top - 42; // Desconto do cabeçalho de 42px
+
+      let minutes = Math.round((y / SLOT_HEIGHT) * 60) + OPEN_MINUTES;
+      minutes = Math.round(minutes / 30) * 30; // Aproximação de 30 minutos
+
+      const duration = timeToMinutes(app.end) - timeToMinutes(app.start);
+      const newStartMinutes = Math.max(OPEN_MINUTES, Math.min(minutes, CLOSE_MINUTES - duration));
+      const newEndMinutes = newStartMinutes + duration;
+
+      const newStart = minutesToTime(newStartMinutes);
+      const newEnd = minutesToTime(newEndMinutes);
+
+      if (app.room === room.id && app.start === newStart && app.date === selectedDate) {
+        return;
+      }
+
+      const updatedApp = {
+        ...app,
+        room: room.id,
+        start: newStart,
+        end: newEnd,
+        date: selectedDate
+      };
+
+      const validation = validateAppointment(updatedApp);
+      if (!validation.ok) {
+        alert(validation.message);
+        return;
+      }
+
+      setSyncStatus("Salvando...", "loading");
+      try {
+        appointments = await persistAppointment(updatedApp);
+        render();
+        setStorageStatus();
+      } catch (error) {
+        alert(error.message || "Não foi possível reagendar.");
+        setStorageStatus();
+      }
+    });
 
     dayAppointments
       .filter((item) => item.room === room.id)
@@ -400,6 +490,48 @@ function renderWeekView() {
     const column = document.createElement("section");
     column.className = "day-column";
     column.append(createColumnHeading(formatWeekday(dateValue), formatShortDate(date)));
+
+    // Drag and Drop
+    column.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", () => {
+      column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      column.classList.remove("drag-over");
+      
+      const id = e.dataTransfer.getData("text/plain");
+      const app = appointments.find((item) => item.id === id);
+      if (!app) return;
+
+      if (app.date === dateValue) {
+        return;
+      }
+
+      const updatedApp = {
+        ...app,
+        date: dateValue
+      };
+
+      const validation = validateAppointment(updatedApp);
+      if (!validation.ok) {
+        alert(validation.message);
+        return;
+      }
+
+      setSyncStatus("Salvando...", "loading");
+      try {
+        appointments = await persistAppointment(updatedApp);
+        render();
+        setStorageStatus();
+      } catch (error) {
+        alert(error.message || "Não foi possível reagendar.");
+        setStorageStatus();
+      }
+    });
 
     const list = document.createElement("div");
     list.className = "appointment-list";
@@ -471,7 +603,10 @@ function renderMonthView() {
     grid.append(cell);
   });
 
-  elements.scheduleContent.append(grid);
+  const wrap = document.createElement("div");
+  wrap.className = "month-grid-wrap";
+  wrap.append(grid);
+  elements.scheduleContent.append(wrap);
 }
 
 function renderRoomsView() {
@@ -489,6 +624,48 @@ function renderRoomsView() {
     const column = document.createElement("section");
     column.className = "room-week-column";
     column.append(createColumnHeading(room.name, "Semana selecionada"));
+
+    // Drag and Drop
+    column.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", () => {
+      column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      column.classList.remove("drag-over");
+      
+      const id = e.dataTransfer.getData("text/plain");
+      const app = appointments.find((item) => item.id === id);
+      if (!app) return;
+
+      if (app.room === room.id) {
+        return;
+      }
+
+      const updatedApp = {
+        ...app,
+        room: room.id
+      };
+
+      const validation = validateAppointment(updatedApp);
+      if (!validation.ok) {
+        alert(validation.message);
+        return;
+      }
+
+      setSyncStatus("Salvando...", "loading");
+      try {
+        appointments = await persistAppointment(updatedApp);
+        render();
+        setStorageStatus();
+      } catch (error) {
+        alert(error.message || "Não foi possível reagendar.");
+        setStorageStatus();
+      }
+    });
 
     const list = document.createElement("div");
     list.className = "appointment-list";
@@ -540,6 +717,19 @@ function createAppointmentBlock(appointment, roomClassName) {
     <span class="block-meta">${escapeHtml(appointment.psychologist)}</span>
   `;
   block.addEventListener("click", () => editAppointment(appointment.id));
+
+  // Drag and Drop
+  block.setAttribute("draggable", "true");
+  block.addEventListener("dragstart", (e) => {
+    e.stopPropagation();
+    e.dataTransfer.setData("text/plain", appointment.id);
+    block.classList.add("dragging");
+  });
+  block.addEventListener("dragend", (e) => {
+    e.stopPropagation();
+    block.classList.remove("dragging");
+  });
+
   return block;
 }
 
@@ -555,6 +745,18 @@ function createAppointmentCard(appointment, showDate) {
 
   card.querySelector(".edit").addEventListener("click", () => editAppointment(appointment.id));
   card.querySelector(".delete").addEventListener("click", () => deleteAppointment(appointment.id));
+
+  // Drag and Drop
+  card.setAttribute("draggable", "true");
+  card.addEventListener("dragstart", (e) => {
+    e.stopPropagation();
+    e.dataTransfer.setData("text/plain", appointment.id);
+    card.classList.add("dragging");
+  });
+  card.addEventListener("dragend", (e) => {
+    e.stopPropagation();
+    card.classList.remove("dragging");
+  });
 
   return card;
 }

@@ -761,6 +761,39 @@ textarea:focus {
   font-weight: 800;
 }
 
+/* Botão Flutuante (FAB) para Mobile */
+.fab-button {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 99;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--cyan);
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(11, 159, 208, 0.4);
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.fab-button:hover,
+.fab-button:active {
+  background: var(--cyan-dark);
+  transform: scale(1.06);
+}
+
+.fab-button span {
+  display: inline-block;
+  margin-top: -3px;
+}
+
 @media (max-width: 1120px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -778,35 +811,99 @@ textarea:focus {
 
 @media (max-width: 720px) {
   .app-shell {
-    padding: 14px;
+    padding: 12px;
   }
 
-  .topbar,
-  .schedule-toolbar {
-    align-items: stretch;
+  .topbar {
+    align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
   .topbar-actions {
-    align-items: stretch;
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .sync-status {
+    min-height: 38px;
+    flex: 0 0 auto;
+  }
+
+  .date-controls {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .new-appointment-button {
+    display: none !important;
+  }
+
+  .fab-button {
+    display: flex;
   }
 
   .brand-logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .brand-lockup h1 {
+    font-size: 1.35rem;
+  }
+
+  .schedule-toolbar {
+    padding: 12px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .current-period {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .summary-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .summary-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .summary-pill {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
   }
 
   .schedule-tools {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
   }
 
   .room-filter {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 5px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .room-filter select {
+    flex: 1;
+    max-width: 200px;
+    min-height: 36px;
   }
 
   .date-controls,
@@ -815,9 +912,11 @@ textarea:focus {
   }
 
   .today-button,
-  .tab-button,
-  .new-appointment-button {
+  .tab-button {
     flex: 1;
+    min-height: 36px;
+    padding: 0 6px;
+    font-size: 0.82rem;
   }
 
   .field-grid,
@@ -827,10 +926,90 @@ textarea:focus {
   }
 
   .schedule-content {
-    padding: 12px;
+    padding: 10px;
   }
 
   .month-grid {
     min-width: 760px;
   }
+
+  /* Painel de Cadastro Mobile (Gaveta Inferior) */
+  .schedule-form-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 85vh;
+    transform: translateY(0);
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding: 18px 14px 28px;
+    box-shadow: 0 -8px 26px rgba(20, 33, 49, 0.18);
+    animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .app-shell.form-open::before {
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* Estilos de Drag and Drop */
+.appointment-block[draggable="true"],
+.appointment-card[draggable="true"] {
+  cursor: grab;
+}
+
+.appointment-block.dragging,
+.appointment-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.room-column.drag-over {
+  background-color: rgba(11, 159, 208, 0.08) !important;
+}
+
+.day-column.drag-over,
+.room-week-column.drag-over {
+  border-color: var(--cyan) !important;
+  background-color: rgba(11, 159, 208, 0.05) !important;
+}
+
+/* Botão de Excluir Vermelho no formulário */
+.ghost-button.delete-button {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ghost-button.delete-button:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.form-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions-row .primary-button {
+  flex: 2;
+}
+
+.form-actions-row .delete-button {
+  flex: 1;
+}
+
+.is-hidden {
+  display: none !important;
 }
