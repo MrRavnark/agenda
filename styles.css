@@ -1,28 +1,51 @@
 :root {
-  --bg: oklch(0.975 0.012 235);
-  --surface: oklch(0.992 0.006 235);
-  --surface-strong: oklch(0.998 0.007 235);
-  --surface-soft: oklch(0.955 0.018 235);
-  --ink: oklch(0.25 0.036 246);
-  --muted: oklch(0.51 0.035 246);
-  --line: oklch(0.88 0.024 238);
-  --line-strong: oklch(0.78 0.034 238);
-  --cyan: oklch(0.58 0.14 221);
-  --cyan-dark: oklch(0.47 0.12 221);
-  --purple: oklch(0.55 0.17 294);
-  --purple-dark: oklch(0.45 0.15 294);
-  --magenta: oklch(0.58 0.2 333);
-  --blue: oklch(0.55 0.15 259);
-  --warning: oklch(0.57 0.12 72);
-  --danger: oklch(0.5 0.14 14);
-  --on-accent: oklch(0.992 0.006 235);
-  --shadow: 0 16px 38px color-mix(in oklch, var(--ink) 12%, transparent);
+  --bg: rgb(247 249 252);
+  --surface: rgb(251 252 255);
+  --surface-strong: rgb(254 252 255);
+  --surface-soft: rgb(239 246 252);
+  --ink: rgb(30 45 63);
+  --muted: rgb(100 114 135);
+  --line: rgb(216 225 236);
+  --line-strong: rgb(185 199 216);
+  --cyan: rgb(11 159 208);
+  --cyan-dark: rgb(8 125 165);
+  --purple: rgb(131 89 221);
+  --purple-dark: rgb(100 65 180);
+  --magenta: rgb(209 27 213);
+  --blue: rgb(47 115 198);
+  --warning: rgb(183 121 31);
+  --danger: rgb(178 65 88);
+  --on-accent: rgb(251 252 255);
+  --shadow: 0 16px 38px rgb(38 64 93 / 0.11);
   --radius: 8px;
-  --slot-height: 58px;
+  --slot-height: 86px;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--bg);
+}
+
+@supports (color: oklch(0.5 0.1 200)) {
+  :root {
+    --bg: oklch(0.975 0.012 235);
+    --surface: oklch(0.992 0.006 235);
+    --surface-strong: oklch(0.998 0.007 235);
+    --surface-soft: oklch(0.955 0.018 235);
+    --ink: oklch(0.25 0.036 246);
+    --muted: oklch(0.51 0.035 246);
+    --line: oklch(0.88 0.024 238);
+    --line-strong: oklch(0.78 0.034 238);
+    --cyan: oklch(0.58 0.14 221);
+    --cyan-dark: oklch(0.47 0.12 221);
+    --purple: oklch(0.55 0.17 294);
+    --purple-dark: oklch(0.45 0.15 294);
+    --magenta: oklch(0.58 0.2 333);
+    --blue: oklch(0.55 0.15 259);
+    --warning: oklch(0.57 0.12 72);
+    --danger: oklch(0.5 0.14 14);
+    --on-accent: oklch(0.992 0.006 235);
+    --shadow: 0 16px 38px color-mix(in oklch, var(--ink) 12%, transparent);
+  }
 }
 
 * {
@@ -32,6 +55,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--bg);
   background:
     linear-gradient(
       180deg,
@@ -39,6 +63,7 @@ body {
       color-mix(in oklch, var(--surface) 86%, transparent) 34rem
     ),
     var(--bg);
+  -webkit-tap-highlight-color: rgb(11 159 208 / 0.18);
   -webkit-tap-highlight-color: color-mix(in oklch, var(--cyan) 18%, transparent);
 }
 
@@ -57,6 +82,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
+  outline: 3px solid rgb(11 159 208 / 0.32);
   outline: 3px solid color-mix(in oklch, var(--cyan) 32%, transparent);
   outline-offset: 2px;
 }
@@ -268,6 +294,7 @@ h2 {
 .schedule-area {
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  background: rgb(251 252 255 / 0.96);
   background: color-mix(in oklch, var(--surface) 96%, transparent);
   box-shadow: var(--shadow);
 }
@@ -293,6 +320,7 @@ h2 {
   position: fixed;
   inset: 0;
   z-index: 50;
+  background: rgb(20 33 49 / 0.38);
   background: color-mix(in oklch, var(--ink) 38%, transparent);
 }
 
@@ -350,6 +378,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgb(11 159 208 / 0.14);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--cyan) 18%, transparent);
 }
 
@@ -509,8 +538,8 @@ textarea:focus {
   height: var(--slot-height);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  padding: 8px 8px 0;
-  font-size: 0.78rem;
+  padding: 10px 8px 0;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
@@ -521,15 +550,19 @@ textarea:focus {
   z-index: 2;
   display: grid;
   gap: 2px;
-  min-height: 30px;
+  min-height: 64px;
   overflow: hidden;
+  border: 1px solid var(--line-strong);
   border: 1px solid color-mix(in oklch, var(--cyan) 34%, var(--line));
   border-radius: 7px;
+  background: var(--surface-soft);
   background: color-mix(in oklch, var(--cyan) 11%, var(--surface));
   color: var(--ink);
-  padding: 6px 8px;
+  padding: 9px 10px;
   text-align: left;
+  box-shadow: 0 8px 18px rgb(35 43 45 / 0.1);
   box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 10%, transparent);
+  touch-action: none;
 }
 
 .appointment-block.room-1 {
@@ -554,7 +587,7 @@ textarea:focus {
 
 .block-time,
 .block-meta {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   line-height: 1.2;
 }
 
@@ -564,9 +597,9 @@ textarea:focus {
 
 .block-patient {
   overflow: hidden;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 900;
-  line-height: 1.14;
+  line-height: 1.18;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -577,6 +610,45 @@ textarea:focus {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.drop-preview {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+  border: 2px dashed var(--cyan);
+  border-radius: 7px;
+  background: rgb(11 159 208 / 0.08);
+  background: color-mix(in oklch, var(--cyan) 8%, transparent);
+  color: var(--cyan-dark);
+  pointer-events: none;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.drop-preview.room-2 {
+  border-color: var(--purple);
+  background: rgb(131 89 221 / 0.08);
+  background: color-mix(in oklch, var(--purple) 8%, transparent);
+  color: var(--purple-dark);
+}
+
+.drop-preview.room-3 {
+  border-color: var(--magenta);
+  background: rgb(209 27 213 / 0.07);
+  background: color-mix(in oklch, var(--magenta) 7%, transparent);
+  color: var(--magenta);
+}
+
+.drop-preview.room-4 {
+  border-color: var(--blue);
+  background: rgb(47 115 198 / 0.08);
+  background: color-mix(in oklch, var(--blue) 8%, transparent);
+  color: var(--blue);
 }
 
 .week-grid,
@@ -815,6 +887,7 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-strong);
+  box-shadow: 0 8px 18px rgb(30 45 63 / 0.07);
   box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 7%, transparent);
 }
 
@@ -852,6 +925,7 @@ textarea:focus {
 }
 
 .mobile-card-main:active {
+  background: rgb(11 159 208 / 0.07);
   background: color-mix(in oklch, var(--cyan) 7%, transparent);
 }
 
@@ -925,6 +999,7 @@ textarea:focus {
 .mobile-delete-button {
   min-width: 74px;
   border-left: 1px solid var(--line);
+  background: rgb(178 65 88 / 0.07);
   background: color-mix(in oklch, var(--danger) 7%, var(--surface));
   color: var(--danger);
   padding: 0 10px;
@@ -953,6 +1028,7 @@ textarea:focus {
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
+  box-shadow: 0 12px 26px rgb(11 159 208 / 0.38);
   box-shadow: 0 12px 26px color-mix(in oklch, var(--cyan) 38%, transparent);
   align-items: center;
   justify-content: center;
@@ -1003,6 +1079,7 @@ textarea:focus {
     top: 0;
     z-index: 30;
     padding: 8px 0 10px;
+    background: rgb(247 249 252 / 0.94);
     background: color-mix(in oklch, var(--bg) 94%, transparent);
     backdrop-filter: blur(18px);
   }
@@ -1055,6 +1132,7 @@ textarea:focus {
     flex-direction: column;
     gap: 12px;
     border-radius: 12px;
+    background: rgb(251 252 255 / 0.96);
     background: color-mix(in oklch, var(--surface) 96%, transparent);
     overflow: hidden;
   }
@@ -1150,6 +1228,7 @@ textarea:focus {
     border-radius: 18px 18px 0 0;
     border-bottom: none;
     padding: 18px 14px calc(28px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 26px rgb(20 33 49 / 0.18);
     box-shadow: 0 -8px 26px color-mix(in oklch, var(--ink) 18%, transparent);
     animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -1199,13 +1278,28 @@ textarea:focus {
   cursor: grabbing;
 }
 
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.is-dragging-appointment {
+  user-select: none;
+}
+
 .room-column.drag-over {
+  background-color: rgb(11 159 208 / 0.08) !important;
   background-color: color-mix(in oklch, var(--cyan) 8%, transparent) !important;
 }
 
 .day-column.drag-over,
 .room-week-column.drag-over {
   border-color: var(--cyan) !important;
+  background-color: rgb(11 159 208 / 0.06) !important;
   background-color: color-mix(in oklch, var(--cyan) 6%, transparent) !important;
 }
 

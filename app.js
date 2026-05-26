@@ -9,7 +9,9 @@ const STORAGE_KEY = "espaco-do-pensar-agenda-v1";
 const ACCESS_KEY_STORAGE_KEY = "espaco-do-pensar-access-key";
 const OPEN_MINUTES = 7 * 60;
 const CLOSE_MINUTES = 22 * 60;
-const SLOT_HEIGHT = 58;
+const SLOT_HEIGHT = 86;
+const GRID_HEADER_HEIGHT = 42;
+const DROP_SNAP_MINUTES = 60;
 const AUTO_REFRESH_INTERVAL_MS = 60000;
 const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
 const CONFIG = window.AGENDA_CONFIG || {};
@@ -18,6 +20,8 @@ let appointments = [];
 let selectedDate = toDateInputValue(new Date());
 let currentView = "day";
 let remoteBackendMode = "unknown";
+let draggedAppointmentId = "";
+let pointerDragState = null;
 
 const elements = {
   appShell: document.querySelector(".app-shell"),
@@ -112,6 +116,9 @@ function initialise() {
     elements.filterPsychologist.addEventListener("change", render);
   }
   window.addEventListener("resize", render);
+  document.addEventListener("pointermove", handlePointerDragMove);
+  document.addEventListener("pointerup", handlePointerDragEnd);
+  document.addEventListener("pointercancel", handlePointerDragEnd);
 
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -401,64 +408,39 @@ function renderDayView() {
   visibleRooms.forEach((room) => {
     const column = document.createElement("div");
     column.className = "room-column";
+    column.dataset.roomId = room.id;
     column.append(createHeaderCell(room.name));
 
     // Drag and Drop
     column.addEventListener("dragover", (e) => {
       e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
       column.classList.add("drag-over");
+      updateDropPreview(column, room, e.clientY);
     });
     column.addEventListener("dragleave", () => {
       column.classList.remove("drag-over");
+      hideDropPreview(column);
     });
     column.addEventListener("drop", async (e) => {
       e.preventDefault();
       column.classList.remove("drag-over");
+      hideDropPreview(column);
       
-      const id = e.dataTransfer.getData("text/plain");
+      const id = draggedAppointmentId || e.dataTransfer.getData("text/plain");
       const app = appointments.find((item) => item.id === id);
       if (!app) return;
 
-      const rect = column.getBoundingClientRect();
-      const y = e.clientY - rect.top - 42; // Desconto do cabeçalho de 42px
-
-      let minutes = Math.round((y / SLOT_HEIGHT) * 60) + OPEN_MINUTES;
-      minutes = Math.round(minutes / 30) * 30; // Aproximação de 30 minutos
-
       const duration = timeToMinutes(app.end) - timeToMinutes(app.start);
-      const newStartMinutes = Math.max(OPEN_MINUTES, Math.min(minutes, CLOSE_MINUTES - duration));
+      const newStartMinutes = getSnappedStartMinutes(column, e.clientY, duration);
       const newEndMinutes = newStartMinutes + duration;
 
-      const newStart = minutesToTime(newStartMinutes);
-      const newEnd = minutesToTime(newEndMinutes);
-
-      if (app.room === room.id && app.start === newStart && app.date === selectedDate) {
-        return;
-      }
-
-      const updatedApp = {
-        ...app,
+      await rescheduleAppointment(app, {
         room: room.id,
-        start: newStart,
-        end: newEnd,
+        start: minutesToTime(newStartMinutes),
+        end: minutesToTime(newEndMinutes),
         date: selectedDate
-      };
-
-      const validation = validateAppointment(updatedApp);
-      if (!validation.ok) {
-        alert(validation.message);
-        return;
-      }
-
-      setSyncStatus("Salvando...", "loading");
-      try {
-        appointments = await persistAppointment(updatedApp);
-        render();
-        setStorageStatus();
-      } catch (error) {
-        alert(error.message || "Não foi possível reagendar.");
-        setStorageStatus();
-      }
+      });
     });
 
     dayAppointments
@@ -492,6 +474,95 @@ function renderMobileDayList(dayAppointments) {
   });
 
   elements.scheduleContent.append(list);
+}
+
+function getSnappedStartMinutes(column, clientY, duration) {
+  const rect = column.getBoundingClientRect();
+  const y = clientY - rect.top - GRID_HEADER_HEIGHT;
+  const slotIndex = Math.round(y / SLOT_HEIGHT);
+  const snappedMinutes = OPEN_MINUTES + slotIndex * DROP_SNAP_MINUTES;
+  return Math.max(OPEN_MINUTES, Math.min(snappedMinutes, CLOSE_MINUTES - duration));
+}
+
+function getBlockHeight(appointment) {
+  const duration = timeToMinutes(appointment.end) - timeToMinutes(appointment.start);
+  return Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - 8);
+}
+
+function updateDropPreview(column, room, clientY) {
+  if (!draggedAppointmentId) {
+    hideDropPreview(column);
+    return;
+  }
+
+  const appointment = appointments.find((item) => item.id === draggedAppointmentId);
+  if (!appointment) {
+    hideDropPreview(column);
+    return;
+  }
+
+  const duration = timeToMinutes(appointment.end) - timeToMinutes(appointment.start);
+  const start = getSnappedStartMinutes(column, clientY, duration);
+  const end = start + duration;
+  const preview = getDropPreview(column);
+
+  preview.className = `drop-preview ${room.className}`;
+  preview.style.top = `${GRID_HEADER_HEIGHT + ((start - OPEN_MINUTES) / DROP_SNAP_MINUTES) * SLOT_HEIGHT}px`;
+  preview.style.height = `${Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - 8)}px`;
+  preview.textContent = `${minutesToTime(start)} - ${minutesToTime(end)}`;
+}
+
+function getDropPreview(column) {
+  let preview = column.querySelector(".drop-preview");
+
+  if (!preview) {
+    preview = document.createElement("div");
+    preview.className = "drop-preview is-hidden";
+    column.append(preview);
+  }
+
+  return preview;
+}
+
+function hideDropPreview(column) {
+  column.querySelector(".drop-preview")?.classList.add("is-hidden");
+}
+
+function hideAllDropPreviews() {
+  document.querySelectorAll(".drop-preview").forEach((preview) => preview.classList.add("is-hidden"));
+}
+
+async function rescheduleAppointment(appointment, changes) {
+  const updatedApp = {
+    ...appointment,
+    ...changes,
+  };
+
+  if (
+    appointment.room === updatedApp.room &&
+    appointment.start === updatedApp.start &&
+    appointment.end === updatedApp.end &&
+    appointment.date === updatedApp.date
+  ) {
+    return;
+  }
+
+  const validation = validateAppointment(updatedApp);
+  if (!validation.ok) {
+    alert(validation.message);
+    return;
+  }
+
+  setSyncStatus("Salvando...", "loading");
+
+  try {
+    appointments = await persistAppointment(updatedApp);
+    render();
+    setStorageStatus();
+  } catch (error) {
+    alert(error.message || "Não foi possível reagendar.");
+    setStorageStatus();
+  }
 }
 
 function renderWeekView() {
@@ -784,29 +855,178 @@ function createAppointmentBlock(appointment, roomClassName) {
   const block = document.createElement("button");
   block.type = "button";
   block.className = `appointment-block ${roomClassName}`;
-  block.style.top = `${42 + ((timeToMinutes(appointment.start) - OPEN_MINUTES) / 60) * SLOT_HEIGHT}px`;
-  block.style.height = `${Math.max(52, ((timeToMinutes(appointment.end) - timeToMinutes(appointment.start)) / 60) * SLOT_HEIGHT - 8)}px`;
+  block.style.top = `${GRID_HEADER_HEIGHT + ((timeToMinutes(appointment.start) - OPEN_MINUTES) / 60) * SLOT_HEIGHT}px`;
+  block.style.height = `${getBlockHeight(appointment)}px`;
   block.title = "Editar atendimento";
   block.innerHTML = `
     <span class="block-time">${appointment.start} - ${appointment.end}</span>
     <span class="block-patient">${escapeHtml(appointment.patient)}</span>
     <span class="block-meta">${escapeHtml(appointment.psychologist)}</span>
   `;
-  block.addEventListener("click", () => editAppointment(appointment.id));
+  block.addEventListener("click", () => {
+    if (block.dataset.suppressClick === "true") {
+      delete block.dataset.suppressClick;
+      return;
+    }
+
+    editAppointment(appointment.id);
+  });
 
   // Drag and Drop
   block.setAttribute("draggable", "true");
+  block.addEventListener("pointerdown", (event) => startPointerDrag(event, appointment, block));
   block.addEventListener("dragstart", (e) => {
     e.stopPropagation();
+    draggedAppointmentId = appointment.id;
     e.dataTransfer.setData("text/plain", appointment.id);
+    e.dataTransfer.effectAllowed = "move";
     block.classList.add("dragging");
+    document.body.classList.add("is-dragging-appointment");
   });
   block.addEventListener("dragend", (e) => {
     e.stopPropagation();
+    draggedAppointmentId = "";
     block.classList.remove("dragging");
+    document.body.classList.remove("is-dragging-appointment");
+    hideAllDropPreviews();
   });
 
   return block;
+}
+
+function startPointerDrag(event, appointment, block) {
+  if (event.pointerType === "mouse") {
+    return;
+  }
+
+  if (event.button !== undefined && event.button !== 0) {
+    return;
+  }
+
+  if (typeof block.setPointerCapture === "function") {
+    block.setPointerCapture(event.pointerId);
+  }
+
+  pointerDragState = {
+    appointment,
+    block,
+    didDrag: false,
+    ghost: null,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+  };
+}
+
+function handlePointerDragMove(event) {
+  if (!pointerDragState || (pointerDragState.pointerId !== undefined && event.pointerId !== pointerDragState.pointerId)) {
+    return;
+  }
+
+  const distance = Math.hypot(event.clientX - pointerDragState.startX, event.clientY - pointerDragState.startY);
+  if (!pointerDragState.didDrag && distance < 8) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (!pointerDragState.didDrag) {
+    pointerDragState.didDrag = true;
+    draggedAppointmentId = pointerDragState.appointment.id;
+    pointerDragState.block.classList.add("dragging");
+    pointerDragState.block.dataset.suppressClick = "true";
+    document.body.classList.add("is-dragging-appointment");
+    pointerDragState.ghost = createDragGhost(pointerDragState.block);
+    document.body.append(pointerDragState.ghost);
+  }
+
+  moveDragGhost(pointerDragState.ghost, event.clientX, event.clientY);
+
+  const column = getRoomColumnAtPoint(event.clientX, event.clientY);
+  if (!column) {
+    hideAllDropPreviews();
+    return;
+  }
+
+  document.querySelectorAll(".room-column.drag-over").forEach((item) => {
+    if (item !== column) {
+      item.classList.remove("drag-over");
+      hideDropPreview(item);
+    }
+  });
+
+  const room = ROOMS.find((item) => item.id === column.dataset.roomId);
+  if (!room) {
+    return;
+  }
+
+  column.classList.add("drag-over");
+  updateDropPreview(column, room, event.clientY);
+}
+
+async function handlePointerDragEnd(event) {
+  if (!pointerDragState || (pointerDragState.pointerId !== undefined && event.pointerId !== pointerDragState.pointerId)) {
+    return;
+  }
+
+  const state = pointerDragState;
+  pointerDragState = null;
+
+  if (!state.didDrag) {
+    return;
+  }
+
+  event.preventDefault();
+  state.block.classList.remove("dragging");
+  if (typeof state.block.releasePointerCapture === "function") {
+    try {
+      state.block.releasePointerCapture(state.pointerId);
+    } catch (error) {
+      // The pointer may already be released after a browser-level cancel.
+    }
+  }
+  state.ghost?.remove();
+  document.body.classList.remove("is-dragging-appointment");
+
+  const column = getRoomColumnAtPoint(event.clientX, event.clientY);
+  hideAllDropPreviews();
+  document.querySelectorAll(".room-column.drag-over").forEach((item) => item.classList.remove("drag-over"));
+  draggedAppointmentId = "";
+
+  if (!column) {
+    return;
+  }
+
+  const duration = timeToMinutes(state.appointment.end) - timeToMinutes(state.appointment.start);
+  const newStartMinutes = getSnappedStartMinutes(column, event.clientY, duration);
+
+  await rescheduleAppointment(state.appointment, {
+    room: column.dataset.roomId,
+    start: minutesToTime(newStartMinutes),
+    end: minutesToTime(newStartMinutes + duration),
+    date: selectedDate,
+  });
+}
+
+function createDragGhost(block) {
+  const ghost = block.cloneNode(true);
+  ghost.classList.add("drag-ghost");
+  ghost.removeAttribute("draggable");
+  ghost.style.width = `${block.getBoundingClientRect().width}px`;
+  ghost.style.height = `${block.getBoundingClientRect().height}px`;
+  return ghost;
+}
+
+function moveDragGhost(ghost, x, y) {
+  if (!ghost) {
+    return;
+  }
+
+  ghost.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+}
+
+function getRoomColumnAtPoint(x, y) {
+  return document.elementFromPoint(x, y)?.closest(".room-column") || null;
 }
 
 function createAppointmentCard(appointment, showDate) {
