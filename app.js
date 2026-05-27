@@ -176,8 +176,8 @@ function readForm() {
 }
 
 function validateAppointment(appointment) {
-  if (!appointment.patient || !appointment.psychologist || !appointment.date || !appointment.start || !appointment.end) {
-    return { ok: false, message: "Preencha paciente, profissional, data e horário." };
+  if (!appointment.patient || !appointment.date || !appointment.start || !appointment.end) {
+    return { ok: false, message: "Preencha paciente, data e horário." };
   }
 
   if (!isAllowedRoomId(appointment.room)) {
@@ -202,7 +202,9 @@ function validateAppointment(appointment) {
     }
 
     const sameRoom = item.room === appointment.room;
-    const sameProfessional = normalize(item.psychologist) === normalize(appointment.psychologist);
+    const sameProfessional =
+      Boolean(item.psychologist && appointment.psychologist) &&
+      normalize(item.psychologist) === normalize(appointment.psychologist);
     return sameRoom || sameProfessional;
   });
 

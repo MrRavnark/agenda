@@ -413,8 +413,8 @@ function sanitizeAppointment_(payload) {
     updatedAt: cleanText_(payload.updatedAt),
   };
 
-  if (!appointment.patient || !appointment.psychologist || !appointment.date || !appointment.start || !appointment.end) {
-    throw new Error("Preencha paciente, psicologa, data e horario.");
+  if (!appointment.patient || !appointment.date || !appointment.start || !appointment.end) {
+    throw new Error("Preencha paciente, data e horario.");
   }
 
   if (!ROOM_NAMES[appointment.room]) {
@@ -447,7 +447,9 @@ function validateAppointment_(appointment, appointments) {
 
     const overlaps = start < timeToMinutes_(item.end) && end > timeToMinutes_(item.start);
     const sameRoom = item.room === appointment.room;
-    const sameProfessional = normalize_(item.psychologist) === normalize_(appointment.psychologist);
+    const sameProfessional =
+      Boolean(item.psychologist && appointment.psychologist) &&
+      normalize_(item.psychologist) === normalize_(appointment.psychologist);
 
     return overlaps && (sameRoom || sameProfessional);
   });
