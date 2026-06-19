@@ -1,7 +1,7 @@
 const ROOMS = [
-  { id: "pm-4", name: "PM - Sala 4", className: "room-3" },
-  { id: "pm-3", name: "PM - Sala 3", className: "room-2" },
   { id: "pm-1", name: "PM - Sala 1", className: "room-1" },
+  { id: "pm-3", name: "PM - Sala 3", className: "room-2" },
+  { id: "pm-4", name: "PM - Sala 4", className: "room-3" },
   { id: "mf-2", name: "MF - Sala 2", className: "room-4" },
 ];
 
@@ -14,7 +14,12 @@ const GRID_HEADER_HEIGHT = 42;
 const DROP_SNAP_MINUTES = 60;
 const APPOINTMENT_BLOCK_INSET = 8;
 const AUTO_REFRESH_INTERVAL_MS = 60000;
-const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
+const MOBILE_LAYOUT_QUERY = "(max-width: 720px) and (orientation: portrait)";
+const MOBILE_LANDSCAPE_QUERY = "(orientation: landscape) and (max-height: 500px)";
+const STRIP_WINDOW_BACK = 21;
+const STRIP_WINDOW_FORWARD = 35;
+const STRIP_EXTEND_CHUNK = 14;
+const STRIP_EDGE_THRESHOLD = 160;
 const CONFIG = window.AGENDA_CONFIG || {};
 const DIRECTORY = window.AGENDA_DIRECTORY || {};
 
@@ -27,10 +32,17 @@ let dragOffsetY = 0;
 let lastFormTrigger = null;
 let globalNoticeTimeoutId = 0;
 let pendingConfirmation = null;
+let stripWindowStart = null;
+let stripWindowEnd = null;
+let stripExtendScheduled = false;
+let lastStripCenter = "";
+let lastPsychologistOptions = null;
+let controlMenuTrigger = null;
 
 const elements = {
   appShell: document.querySelector(".app-shell"),
   formPanel: document.querySelector(".schedule-form-panel"),
+  formScrim: document.querySelector("#form-scrim"),
   form: document.querySelector("#appointment-form"),
   formTitle: document.querySelector("#form-title"),
   appointmentId: document.querySelector("#appointment-id"),
@@ -42,6 +54,7 @@ const elements = {
   start: document.querySelector("#start"),
   end: document.querySelector("#end"),
   room: document.querySelector("#room"),
+  roomOptions: document.querySelector("#room-options"),
   notes: document.querySelector("#notes"),
   feedback: document.querySelector("#form-feedback"),
   submit: document.querySelector("#submit-appointment"),
@@ -49,14 +62,29 @@ const elements = {
   clearForm: document.querySelector("#clear-form"),
   closeForm: document.querySelector("#close-form"),
   previousDate: document.querySelector("#previous-date"),
-  todayDate: document.querySelector("#today-date"),
   nextDate: document.querySelector("#next-date"),
+  dateStrip: document.querySelector("#date-strip"),
+  dateStripRow: document.querySelector(".date-nav-row"),
+  openCalendar: document.querySelector("#open-calendar"),
+  jumpDate: document.querySelector("#jump-date"),
   currentPeriod: document.querySelector("#current-period"),
-  summaryStrip: document.querySelector("#summary-strip"),
   scheduleContent: document.querySelector("#schedule-content"),
   syncStatus: document.querySelector("#sync-status"),
   filterRoom: document.querySelector("#filter-room"),
   filterPsychologist: document.querySelector("#filter-psychologist"),
+  filterRoomBtn: document.querySelector("#filter-room-btn"),
+  filterRoomLabel: document.querySelector("#filter-room-label"),
+  filterRoomMenu: document.querySelector("#filter-room-menu"),
+  filterPsychologistBtn: document.querySelector("#filter-psychologist-btn"),
+  filterPsychologistLabel: document.querySelector("#filter-psychologist-label"),
+  filterPsychologistMenu: document.querySelector("#filter-psychologist-menu"),
+  viewSelectBtn: document.querySelector("#view-select-btn"),
+  viewSelectLabel: document.querySelector("#view-select-label"),
+  viewSelectMenu: document.querySelector("#view-select-menu"),
+  filterBtn: document.querySelector("#filter-btn"),
+  clearFilters: document.querySelector("#clear-filters"),
+  applyFilters: document.querySelector("#apply-filters"),
+  filterInline: document.querySelector("#filter-inline"),
   newAppointment: document.querySelector("#new-appointment"),
   fabNewAppointment: document.querySelector("#fab-new-appointment"),
   appointmentTemplate: document.querySelector("#appointment-template"),
@@ -66,26 +94,20 @@ const elements = {
 initialise();
 
 function initialise() {
-  ROOMS.forEach((room) => {
-    const option = document.createElement("option");
-    option.value = room.id;
-    option.textContent = room.name;
-    elements.room.append(option);
-
-    const filterOption = document.createElement("option");
-    filterOption.value = room.id;
-    filterOption.textContent = room.name;
-    elements.filterRoom.append(filterOption);
-  });
+  buildRoomOptions();
+  buildRoomFilterMenu();
 
   elements.date.value = selectedDate;
   elements.start.value = "08:00";
   elements.end.value = "09:00";
-  elements.room.value = ROOMS[0].id;
+  setRoom(ROOMS[0].id);
 
   elements.form.addEventListener("submit", handleSubmit);
   elements.clearForm.addEventListener("click", resetForm);
   elements.closeForm.addEventListener("click", () => closeFormPanel());
+  if (elements.formScrim) {
+    elements.formScrim.addEventListener("click", () => closeFormPanel());
+  }
   elements.deleteBtn.addEventListener("click", () => {
     const id = elements.appointmentId.value;
     if (id) {
@@ -104,29 +126,95 @@ function initialise() {
   }
   elements.previousDate.addEventListener("click", () => moveDate(-1));
   elements.nextDate.addEventListener("click", () => moveDate(1));
-  elements.todayDate.addEventListener("click", () => {
-    selectedDate = toDateInputValue(new Date());
-    elements.date.value = selectedDate;
-    render();
-  });
 
-  elements.date.addEventListener("change", () => {
-    selectedDate = elements.date.value || selectedDate;
-    render();
-  });
-
-  elements.start.addEventListener("change", suggestEndTime);
-  elements.filterRoom.addEventListener("change", render);
-  if (elements.filterPsychologist) {
-    elements.filterPsychologist.addEventListener("change", render);
+  if (elements.openCalendar && elements.jumpDate) {
+    elements.openCalendar.addEventListener("click", openDatePicker);
+    elements.jumpDate.addEventListener("change", () => {
+      if (elements.jumpDate.value) {
+        selectedDate = elements.jumpDate.value;
+        render();
+      }
+    });
   }
+
+  if (elements.dateStrip) {
+    elements.dateStrip.addEventListener("scroll", handleStripScroll, { passive: true });
+    elements.dateStrip.addEventListener("keydown", handleStripKeydown);
+  }
+
+  elements.start.addEventListener("change", () => {
+    suggestEndTime();
+    updateRoomStatuses();
+  });
+  elements.end.addEventListener("change", updateRoomStatuses);
+  elements.date.addEventListener("change", updateRoomStatuses);
+  if (elements.viewSelectBtn) {
+    elements.viewSelectBtn.addEventListener("click", () =>
+      toggleControlMenu(elements.viewSelectMenu, elements.viewSelectBtn),
+    );
+  }
+  if (elements.filterRoomBtn) {
+    elements.filterRoomBtn.addEventListener("click", () =>
+      toggleControlMenu(elements.filterRoomMenu, elements.filterRoomBtn),
+    );
+  }
+  if (elements.filterPsychologistBtn) {
+    elements.filterPsychologistBtn.addEventListener("click", () =>
+      toggleControlMenu(elements.filterPsychologistMenu, elements.filterPsychologistBtn),
+    );
+  }
+  [elements.filterRoomMenu, elements.filterPsychologistMenu].forEach((menu) => {
+    if (menu) {
+      menu.addEventListener("keydown", handleFilterMenuKeydown);
+    }
+  });
+  if (elements.filterBtn) {
+    elements.filterBtn.addEventListener("click", toggleFilterInline);
+  }
+  if (elements.clearFilters) {
+    elements.clearFilters.addEventListener("click", () => {
+      resetFilter(elements.filterRoom, elements.filterRoomLabel, elements.filterRoomMenu);
+      resetFilter(elements.filterPsychologist, elements.filterPsychologistLabel, elements.filterPsychologistMenu);
+      render();
+      closeFilterInline();
+    });
+  }
+  if (elements.applyFilters) {
+    elements.applyFilters.addEventListener("click", () => {
+      render();
+      closeFilterInline();
+    });
+  }
+  // No mobile o filtro abre com overflow:hidden (animação de max-height). Quando termina de
+  // abrir, libera o overflow pra o popover dos dropdowns não ser cortado pela 2ª linha.
+  if (elements.filterInline) {
+    elements.filterInline.addEventListener("transitionend", (event) => {
+      if (event.propertyName === "max-height" && isFilterInlineOpen()) {
+        elements.filterInline.classList.add("is-expanded");
+      }
+    });
+  }
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".view-select, .filter-select")) {
+      closeControlMenus();
+    }
+  });
+  let resizeRaf = 0;
   window.addEventListener("resize", () => {
-    render();
-    syncFormPresentation();
+    if (resizeRaf) {
+      cancelAnimationFrame(resizeRaf);
+    }
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      enforceMobileView();
+      render();
+      syncFormPresentation();
+    });
   });
   document.addEventListener("keydown", handleDocumentKeydown);
 
   initialiseViewTabs();
+  enforceMobileView();
   syncFormPresentation();
 
   render();
@@ -204,7 +292,7 @@ function validateAppointment(appointment) {
     const sameRoom = item.room === appointment.room;
     const sameProfessional =
       Boolean(item.psychologist && appointment.psychologist) &&
-      normalize(item.psychologist) === normalize(appointment.psychologist);
+      normalizeNameKey(item.psychologist) === normalizeNameKey(appointment.psychologist);
     return sameRoom || sameProfessional;
   });
 
@@ -229,11 +317,91 @@ function resetForm(clearMessage = true) {
   elements.date.value = selectedDate;
   elements.start.value = "08:00";
   elements.end.value = "09:00";
-  elements.room.value = ROOMS[0].id;
+  setRoom(ROOMS[0].id);
 
   if (clearMessage) {
     showFeedback("", "success");
   }
+}
+
+function buildRoomOptions() {
+  if (!elements.roomOptions) {
+    return;
+  }
+
+  ROOMS.forEach((room) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = `room-option ${room.className}`;
+    option.dataset.room = room.id;
+    option.setAttribute("role", "radio");
+    option.innerHTML = `<span class="room-option-name"></span><span class="room-status"></span>`;
+    option.querySelector(".room-option-name").textContent = room.name;
+    option.addEventListener("click", () => setRoom(room.id));
+    elements.roomOptions.append(option);
+  });
+}
+
+function setRoom(roomId) {
+  if (!elements.room) {
+    return;
+  }
+
+  elements.room.value = roomId;
+
+  if (elements.roomOptions) {
+    elements.roomOptions.querySelectorAll(".room-option").forEach((option) => {
+      const isSelected = option.dataset.room === roomId;
+      option.classList.toggle("is-selected", isSelected);
+      option.setAttribute("aria-checked", String(isSelected));
+    });
+  }
+
+  updateRoomStatuses();
+}
+
+function updateRoomStatuses() {
+  if (!elements.roomOptions) {
+    return;
+  }
+
+  const occupied = getOccupiedRoomIds();
+  elements.roomOptions.querySelectorAll(".room-option").forEach((option) => {
+    const isOccupied = occupied.has(option.dataset.room);
+    const badge = option.querySelector(".room-status");
+    badge.textContent = isOccupied ? "Ocupada" : "Livre";
+    badge.classList.toggle("is-occupied", isOccupied);
+    badge.classList.toggle("is-free", !isOccupied);
+  });
+}
+
+function getOccupiedRoomIds() {
+  const date = elements.date.value;
+  const start = elements.start.value;
+  const end = elements.end.value;
+  const currentId = elements.appointmentId.value;
+  const occupied = new Set();
+
+  if (!date || !start || !end) {
+    return occupied;
+  }
+
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
+  if (!(endMinutes > startMinutes)) {
+    return occupied;
+  }
+
+  appointments.forEach((item) => {
+    if (item.id === currentId || item.date !== date) {
+      return;
+    }
+    if (startMinutes < timeToMinutes(item.end) && endMinutes > timeToMinutes(item.start)) {
+      occupied.add(item.room);
+    }
+  });
+
+  return occupied;
 }
 
 function editAppointment(id, trigger = null) {
@@ -248,7 +416,7 @@ function editAppointment(id, trigger = null) {
   elements.date.value = appointment.date;
   elements.start.value = appointment.start;
   elements.end.value = appointment.end;
-  elements.room.value = appointment.room;
+  setRoom(appointment.room);
   elements.notes.value = appointment.notes;
   elements.formTitle.textContent = "Editar atendimento";
   elements.submit.textContent = "Atualizar atendimento";
@@ -292,6 +460,12 @@ function activateView(tab, { focus = false, renderView = true } = {}) {
     }
   });
 
+  if (elements.viewSelectLabel) {
+    elements.viewSelectLabel.textContent = tab.textContent.trim();
+  }
+
+  closeControlMenus();
+
   if (focus) {
     focusElement(tab);
   }
@@ -299,6 +473,102 @@ function activateView(tab, { focus = false, renderView = true } = {}) {
   if (renderView) {
     render();
   }
+}
+
+function enforceMobileView() {
+  // No celular vertical só usamos a visão Dia.
+  if (isMobileLayout() && currentView !== "day") {
+    const dayTab = elements.tabs.find((tab) => tab.dataset.view === "day");
+    if (dayTab) {
+      activateView(dayTab, { renderView: false });
+    }
+  }
+}
+
+function toggleControlMenu(menu, button) {
+  if (!menu || !button) {
+    return;
+  }
+
+  const willOpen = menu.classList.contains("is-hidden");
+  closeControlMenus();
+
+  if (willOpen) {
+    menu.classList.remove("is-hidden");
+    button.setAttribute("aria-expanded", "true");
+    controlMenuTrigger = button;
+    // foco vai para a opção ativa (ou a primeira) ao abrir — adiado p/ não interferir na abertura
+    const target = menu.querySelector(".active") || menu.querySelector("button");
+    window.requestAnimationFrame(() => {
+      if (!menu.classList.contains("is-hidden")) {
+        focusElement(target);
+      }
+    });
+  }
+}
+
+// Todos os menus tipo popover (visão + filtros) compartilham o mesmo mecanismo.
+function getControlMenus() {
+  return [
+    [elements.viewSelectMenu, elements.viewSelectBtn],
+    [elements.filterRoomMenu, elements.filterRoomBtn],
+    [elements.filterPsychologistMenu, elements.filterPsychologistBtn],
+  ];
+}
+
+function closeControlMenus() {
+  const focusWasInMenu = getControlMenus().some(([menu]) => menu && menu.contains(document.activeElement));
+  getControlMenus().forEach(([menu, button]) => {
+    if (menu) {
+      menu.classList.add("is-hidden");
+    }
+    if (button) {
+      button.setAttribute("aria-expanded", "false");
+    }
+  });
+  // devolve o foco ao gatilho se ele estava dentro de um menu (ex.: fechar via Esc)
+  if (focusWasInMenu && controlMenuTrigger) {
+    focusElement(controlMenuTrigger);
+  }
+  controlMenuTrigger = null;
+}
+
+function isAnyControlMenuOpen() {
+  return getControlMenus().some(([menu]) => menu && !menu.classList.contains("is-hidden"));
+}
+
+function toggleFilterInline() {
+  const row = elements.dateStripRow;
+  if (!row) {
+    return;
+  }
+
+  if (row.classList.contains("is-filtering")) {
+    closeFilterInline();
+    return;
+  }
+
+  row.classList.add("is-filtering");
+  if (elements.filterBtn) {
+    elements.filterBtn.setAttribute("aria-expanded", "true");
+  }
+}
+
+function closeFilterInline() {
+  closeControlMenus(); // fecha qualquer popover de filtro aberto ao compactar
+  if (elements.filterInline) {
+    elements.filterInline.classList.remove("is-expanded");
+  }
+  if (elements.dateStripRow) {
+    elements.dateStripRow.classList.remove("is-filtering");
+  }
+  if (elements.filterBtn) {
+    elements.filterBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function isFilterInlineOpen() {
+  return Boolean(elements.dateStripRow && elements.dateStripRow.classList.contains("is-filtering"));
 }
 
 function handleTabKeydown(event) {
@@ -325,6 +595,16 @@ function handleTabKeydown(event) {
 }
 
 function handleDocumentKeydown(event) {
+  if (event.key === "Escape" && isAnyControlMenuOpen()) {
+    closeControlMenus();
+    return;
+  }
+
+  if (event.key === "Escape" && isFilterInlineOpen()) {
+    closeFilterInline();
+    return;
+  }
+
   const isOpen = !elements.formPanel.classList.contains("is-hidden");
   if (!isOpen) {
     return;
@@ -336,7 +616,7 @@ function handleDocumentKeydown(event) {
     return;
   }
 
-  if (event.key === "Tab" && isMobileLayout()) {
+  if (event.key === "Tab") {
     trapFormFocus(event);
   }
 }
@@ -362,6 +642,7 @@ function closeFormPanel({ restoreFocus = true } = {}) {
   elements.formPanel.classList.add("is-hidden");
   elements.appShell.classList.remove("form-open");
   setFormExpandedState(false);
+  setBackgroundInert(false);
   document.body.style.overflow = "";
   elements.formPanel.setAttribute("role", "complementary");
   elements.formPanel.removeAttribute("aria-modal");
@@ -374,15 +655,9 @@ function closeFormPanel({ restoreFocus = true } = {}) {
 function syncFormPresentation() {
   const isOpen = !elements.formPanel.classList.contains("is-hidden");
   setFormExpandedState(isOpen);
+  setBackgroundInert(isOpen);
 
-  if (!isOpen) {
-    document.body.style.overflow = "";
-    elements.formPanel.setAttribute("role", "complementary");
-    elements.formPanel.removeAttribute("aria-modal");
-    return;
-  }
-
-  if (isMobileLayout()) {
+  if (isOpen) {
     document.body.style.overflow = "hidden";
     elements.formPanel.setAttribute("role", "dialog");
     elements.formPanel.setAttribute("aria-modal", "true");
@@ -400,6 +675,16 @@ function setFormExpandedState(isExpanded) {
   [elements.newAppointment, elements.fabNewAppointment].filter(Boolean).forEach((button) => {
     button.setAttribute("aria-expanded", String(isExpanded));
   });
+}
+
+// Com o formulário (dialog) aberto, o fundo fica inerte para teclado/leitor de tela não alcançá-lo.
+function setBackgroundInert(isInert) {
+  [document.querySelector(".topbar"), document.querySelector(".schedule-area"), elements.fabNewAppointment]
+    .filter(Boolean)
+    .forEach((el) => {
+      el.inert = isInert;
+      el.setAttribute("aria-hidden", String(isInert));
+    });
 }
 
 function restoreFormFocus() {
@@ -636,16 +921,15 @@ function moveDate(direction) {
   }
 
   selectedDate = toDateInputValue(base);
-  elements.date.value = selectedDate;
   render();
 }
 
 function render() {
   populateDirectoryOptions();
   populatePsychologistFilter();
-  const selectedAppointments = getAppointmentsForSelectedPeriod();
   renderPeriodLabel();
-  renderSummary(selectedAppointments);
+  renderDateStrip();
+  updateFilterIndicator();
 
   if (currentView === "day") {
     renderDayView();
@@ -664,17 +948,115 @@ function render() {
   }
 }
 
-function renderPeriodLabel() {
-  if (currentView === "day") {
-    elements.currentPeriod.textContent = formatLongDate(selectedDate);
+function updateFilterIndicator() {
+  if (!elements.filterBtn) {
     return;
   }
 
-  if (currentView === "month") {
-    elements.currentPeriod.textContent = new Intl.DateTimeFormat("pt-BR", {
-      month: "long",
-      year: "numeric",
-    }).format(parseDate(selectedDate));
+  const roomActive = elements.filterRoom && elements.filterRoom.value !== "all";
+  const psyActive = elements.filterPsychologist && elements.filterPsychologist.value !== "all";
+  elements.filterBtn.classList.toggle("is-active", Boolean(roomActive || psyActive));
+}
+
+// --- Dropdowns de filtro (mesmo padrão do seletor de visão: botão + popover) ---
+
+// Navegação por teclado no popover do filtro (setas movem o foco; Enter/Espaço seleciona nativamente).
+function handleFilterMenuKeydown(event) {
+  const menu = event.currentTarget;
+  const options = Array.from(menu.querySelectorAll(".filter-option"));
+  if (!options.length) {
+    return;
+  }
+
+  const currentIndex = options.indexOf(document.activeElement);
+  const targets = {
+    ArrowDown: (currentIndex + 1) % options.length,
+    ArrowUp: (currentIndex - 1 + options.length) % options.length,
+    Home: 0,
+    End: options.length - 1,
+  };
+
+  if (event.key in targets) {
+    event.preventDefault();
+    focusElement(options[targets[event.key]]);
+  }
+}
+
+// Preenche um menu de filtro com botões de opção (reusa o visual .tab-button).
+function buildFilterMenu(menu, options, selectedValue, onSelect) {
+  if (!menu) {
+    return;
+  }
+  menu.innerHTML = "";
+  options.forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tab-button filter-option";
+    button.dataset.value = option.value;
+    button.textContent = option.label;
+    button.setAttribute("role", "option");
+    const isActive = option.value === selectedValue;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+    button.addEventListener("click", () => onSelect(option.value, option.label));
+    menu.append(button);
+  });
+}
+
+// Marca a opção ativa no menu (sem reconstruir o DOM).
+function markFilterActive(menu, value) {
+  if (!menu) {
+    return;
+  }
+  menu.querySelectorAll(".filter-option").forEach((button) => {
+    const isActive = button.dataset.value === value;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+}
+
+// Aplica a seleção de um filtro: guarda valor (input oculto), atualiza rótulo, fecha e renderiza.
+function applyFilterSelection(input, label, menu, value, text) {
+  if (input) {
+    input.value = value;
+  }
+  if (label) {
+    label.textContent = text;
+  }
+  markFilterActive(menu, value);
+  closeControlMenus();
+  render();
+}
+
+// Volta um filtro para "Todas".
+function resetFilter(input, label, menu) {
+  if (input) {
+    input.value = "all";
+  }
+  if (label) {
+    label.textContent = "Todas";
+  }
+  markFilterActive(menu, "all");
+}
+
+// Menu de Sala (estático, a partir de ROOMS).
+function buildRoomFilterMenu() {
+  if (!elements.filterRoomMenu) {
+    return;
+  }
+  const options = [
+    { value: "all", label: "Todas" },
+    ...ROOMS.map((room) => ({ value: room.id, label: room.name })),
+  ];
+  const current = elements.filterRoom ? elements.filterRoom.value || "all" : "all";
+  buildFilterMenu(elements.filterRoomMenu, options, current, (value, text) =>
+    applyFilterSelection(elements.filterRoom, elements.filterRoomLabel, elements.filterRoomMenu, value, text),
+  );
+}
+
+function renderPeriodLabel() {
+  if (currentView === "day" || currentView === "month") {
+    elements.currentPeriod.textContent = formatMonthYear(selectedDate);
     return;
   }
 
@@ -682,23 +1064,171 @@ function renderPeriodLabel() {
   elements.currentPeriod.textContent = `${formatShortDate(week[0])} a ${formatShortDate(week[6])}`;
 }
 
-function renderSummary(periodAppointments) {
-  elements.summaryStrip.innerHTML = "";
+function formatMonthYear(value) {
+  return capitalizeFirst(
+    new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(parseDate(value)),
+  );
+}
 
-  const total = createSummaryPill("Total", String(periodAppointments.length));
-  elements.summaryStrip.append(total);
+function addDays(date, amount) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
 
-  ROOMS.forEach((room) => {
-    const count = periodAppointments.filter((item) => item.room === room.id).length;
-    elements.summaryStrip.append(createSummaryPill(room.name, String(count)));
+function renderDateStrip() {
+  if (!elements.dateStrip) {
+    return;
+  }
+
+  const selected = parseDate(selectedDate);
+  const needsRebuild =
+    !stripWindowStart ||
+    !stripWindowEnd ||
+    selected < addDays(stripWindowStart, 3) ||
+    selected > addDays(stripWindowEnd, -3);
+
+  if (needsRebuild) {
+    buildStripWindow(selected);
+  }
+
+  updateStripSelection();
+
+  if (needsRebuild || selectedDate !== lastStripCenter) {
+    scrollChipIntoView(selectedDate, !needsRebuild);
+    lastStripCenter = selectedDate;
+  }
+}
+
+function buildStripWindow(centerDate) {
+  stripWindowStart = addDays(centerDate, -STRIP_WINDOW_BACK);
+  stripWindowEnd = addDays(centerDate, STRIP_WINDOW_FORWARD);
+
+  const fragment = document.createDocumentFragment();
+  for (let date = new Date(stripWindowStart); date <= stripWindowEnd; date = addDays(date, 1)) {
+    fragment.append(createDayChip(date));
+  }
+
+  elements.dateStrip.replaceChildren(fragment);
+}
+
+function createDayChip(date) {
+  const value = toDateInputValue(date);
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "day-chip";
+  chip.dataset.date = value;
+  chip.setAttribute("role", "option");
+
+  const weekday = document.createElement("span");
+  weekday.className = "day-chip-weekday";
+  weekday.textContent = formatWeekday(value).replace(".", "").toLocaleUpperCase("pt-BR");
+
+  const number = document.createElement("span");
+  number.className = "day-chip-number";
+  number.textContent = String(date.getDate());
+
+  chip.append(weekday, number);
+  chip.addEventListener("click", () => {
+    selectedDate = value;
+    render();
+  });
+
+  return chip;
+}
+
+function getStripHighlightSet() {
+  if (currentView === "week" || currentView === "rooms") {
+    return new Set(getWeekDates(selectedDate).map(toDateInputValue));
+  }
+  return new Set([selectedDate]);
+}
+
+function updateStripSelection() {
+  const highlighted = getStripHighlightSet();
+  const today = toDateInputValue(new Date());
+
+  elements.dateStrip.querySelectorAll(".day-chip").forEach((chip) => {
+    const value = chip.dataset.date;
+    const isSelected = highlighted.has(value);
+    chip.classList.toggle("is-selected", isSelected);
+    chip.classList.toggle("is-today", value === today);
+    chip.setAttribute("aria-selected", String(isSelected));
   });
 }
 
-function createSummaryPill(label, value) {
-  const pill = document.createElement("span");
-  pill.className = "summary-pill";
-  pill.innerHTML = `<strong>${value}</strong>${label}`;
-  return pill;
+function scrollChipIntoView(value, smooth) {
+  const chip = elements.dateStrip.querySelector(`.day-chip[data-date="${value}"]`);
+  if (!chip) {
+    return;
+  }
+
+  const target = chip.offsetLeft - (elements.dateStrip.clientWidth - chip.offsetWidth) / 2;
+  elements.dateStrip.scrollTo({ left: Math.max(0, target), behavior: smooth ? "smooth" : "auto" });
+}
+
+function handleStripScroll() {
+  if (stripExtendScheduled) {
+    return;
+  }
+
+  stripExtendScheduled = true;
+  window.requestAnimationFrame(() => {
+    stripExtendScheduled = false;
+    extendStripIfNeeded();
+  });
+}
+
+function extendStripIfNeeded() {
+  const strip = elements.dateStrip;
+  if (!strip || !stripWindowStart || !stripWindowEnd) {
+    return;
+  }
+
+  if (strip.scrollLeft <= STRIP_EDGE_THRESHOLD) {
+    const fragment = document.createDocumentFragment();
+    for (let i = STRIP_EXTEND_CHUNK; i >= 1; i -= 1) {
+      fragment.append(createDayChip(addDays(stripWindowStart, -i)));
+    }
+    stripWindowStart = addDays(stripWindowStart, -STRIP_EXTEND_CHUNK);
+    const previousWidth = strip.scrollWidth;
+    strip.prepend(fragment);
+    strip.scrollLeft += strip.scrollWidth - previousWidth;
+  }
+
+  if (strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - STRIP_EDGE_THRESHOLD) {
+    const fragment = document.createDocumentFragment();
+    for (let i = 1; i <= STRIP_EXTEND_CHUNK; i += 1) {
+      fragment.append(createDayChip(addDays(stripWindowEnd, i)));
+    }
+    stripWindowEnd = addDays(stripWindowEnd, STRIP_EXTEND_CHUNK);
+    strip.append(fragment);
+  }
+}
+
+function handleStripKeydown(event) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+    return;
+  }
+
+  event.preventDefault();
+  selectedDate = toDateInputValue(addDays(parseDate(selectedDate), event.key === "ArrowLeft" ? -1 : 1));
+  render();
+}
+
+function openDatePicker() {
+  if (!elements.jumpDate) {
+    return;
+  }
+
+  elements.jumpDate.value = selectedDate;
+
+  try {
+    elements.jumpDate.showPicker();
+  } catch {
+    elements.jumpDate.focus();
+    elements.jumpDate.click();
+  }
 }
 
 function renderDayView() {
@@ -722,8 +1252,16 @@ function renderDayView() {
 
   const grid = document.createElement("div");
   grid.className = "day-grid";
-  grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, minmax(${colMinWidth}px, 1fr))`;
-  grid.style.minWidth = `${minGridWidth}px`;
+  if (isMobileLandscape()) {
+    // Pager por sala: colunas fixas (~1,3 sala por tela) e a grade transborda na horizontal.
+    const roomColWidth = `calc((100vw - ${timeColWidth}px) / 1.3)`;
+    grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, ${roomColWidth})`;
+    grid.style.width = "max-content";
+    grid.style.minWidth = "0";
+  } else {
+    grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, minmax(${colMinWidth}px, 1fr))`;
+    grid.style.minWidth = `${minGridWidth}px`;
+  }
 
   const timeColumn = document.createElement("div");
   timeColumn.className = "time-column";
@@ -777,11 +1315,41 @@ function renderDayView() {
       });
     });
 
-    dayAppointments
-      .filter((item) => item.room === room.id)
-      .forEach((appointment) => {
-        column.append(createAppointmentBlock(appointment, room.className));
-      });
+    // Clique em espaço vazio → novo atendimento pré-preenchido (sala da coluna + hora do clique).
+    column.addEventListener("click", (event) => {
+      if (event.target !== column) return; // ignora blocos e o cabeçalho da sala
+      if (draggedAppointmentId) return; // ignora clique residual de arrasto
+      const startMinutes = getClickStartMinutes(column, event.clientY);
+      openNewAppointmentAt(
+        minutesToTime(startMinutes),
+        minutesToTime(startMinutes + 60),
+        room.id,
+        column,
+      );
+    });
+
+    // Fantasma de hover (desktop): mostra onde o clique vai criar. No toque não há hover.
+    column.addEventListener("mousemove", (event) => {
+      if (draggedAppointmentId || event.target !== column) {
+        hideDropPreview(column);
+        return;
+      }
+      const startMinutes = getClickStartMinutes(column, event.clientY);
+      const preview = getDropPreview(column);
+      preview.className = `drop-preview ghost ${room.className}`;
+      preview.style.top = `${getBlockTop(startMinutes)}px`;
+      preview.style.height = `${SLOT_HEIGHT - APPOINTMENT_BLOCK_INSET}px`;
+      preview.textContent = `+ ${minutesToTime(startMinutes)}`;
+      preview.classList.remove("is-hidden");
+    });
+    column.addEventListener("mouseleave", () => {
+      if (!draggedAppointmentId) hideDropPreview(column);
+    });
+
+    const roomAppointments = dayAppointments.filter((item) => item.room === room.id);
+    layoutOverlaps(roomAppointments).forEach(({ appointment, lane, laneCount }) => {
+      column.append(createAppointmentBlock(appointment, room.className, lane, laneCount));
+    });
 
     grid.append(column);
   });
@@ -798,16 +1366,79 @@ function renderMobileDayList(dayAppointments) {
   const list = document.createElement("div");
   list.className = "mobile-agenda-list";
 
-  if (!dayAppointments.length) {
-    elements.scheduleContent.append(createEmptyState("Nenhum atendimento neste dia."));
-    return;
+  const visibleRooms = getVisibleRooms();
+  // Ocupação por sala (todas as marcações do dia nas salas visíveis), para saber
+  // quais salas estão livres em cada hora — independente do filtro de psicólogo.
+  const dayRoomAppointments = appointments.filter(
+    (item) => item.date === selectedDate && visibleRooms.some((room) => room.id === item.room),
+  );
+
+  const openHour = Math.floor(OPEN_MINUTES / 60);
+  const closeHour = Math.floor(CLOSE_MINUTES / 60);
+
+  for (let hour = openHour; hour < closeHour; hour += 1) {
+    const hourStart = hour * 60;
+    const hourEnd = hourStart + 60;
+
+    dayAppointments
+      .filter((item) => {
+        const startMinutes = timeToMinutes(item.start);
+        return startMinutes >= hourStart && startMinutes < hourEnd;
+      })
+      .forEach((appointment) => list.append(createMobileAppointmentCard(appointment)));
+
+    const freeRooms = visibleRooms.filter(
+      (room) =>
+        !dayRoomAppointments.some(
+          (item) =>
+            item.room === room.id &&
+            timeToMinutes(item.start) < hourEnd &&
+            timeToMinutes(item.end) > hourStart,
+        ),
+    );
+
+    if (freeRooms.length) {
+      list.append(createMobileFreeSlot(hour, freeRooms));
+    }
   }
 
-  dayAppointments.forEach((appointment) => {
-    list.append(createMobileAppointmentCard(appointment));
+  elements.scheduleContent.append(list);
+}
+
+function createMobileFreeSlot(hour, freeRooms) {
+  const start = minutesToTime(hour * 60);
+  const end = minutesToTime((hour + 1) * 60);
+  const roomNames = freeRooms.map((room) => room.name).join(" · ");
+
+  const slot = document.createElement("button");
+  slot.type = "button";
+  slot.className = "mobile-free-slot";
+  slot.setAttribute("aria-label", `Horário disponível às ${start}: ${roomNames}. Toque para agendar`);
+  slot.innerHTML = `
+    <span class="free-slot-time">${start}<small>${end}</small></span>
+    <span class="free-slot-text"><strong>Horário disponível</strong><span class="free-slot-rooms"></span></span>
+  `;
+
+  const roomsWrap = slot.querySelector(".free-slot-rooms");
+  freeRooms.forEach((room) => {
+    const tag = document.createElement("span");
+    tag.className = `free-room-tag ${room.className}`;
+    tag.textContent = room.name;
+    roomsWrap.append(tag);
   });
 
-  elements.scheduleContent.append(list);
+  slot.addEventListener("click", (event) => openNewAppointmentAt(start, end, freeRooms[0].id, event.currentTarget));
+
+  return slot;
+}
+
+function openNewAppointmentAt(start, end, roomId, trigger) {
+  resetForm();
+  elements.date.value = selectedDate;
+  elements.start.value = start;
+  elements.end.value = end;
+  setRoom(roomId || ROOMS[0].id);
+  openFormPanel(trigger);
 }
 
 function getSnappedStartMinutes(column, clientY, duration) {
@@ -818,6 +1449,15 @@ function getSnappedStartMinutes(column, clientY, duration) {
   return Math.max(OPEN_MINUTES, Math.min(snappedMinutes, CLOSE_MINUTES - duration));
 }
 
+// Hora onde o clique caiu (sem dragOffsetY; floor = a faixa horária clicada). Para criar via clique.
+function getClickStartMinutes(column, clientY) {
+  const rect = column.getBoundingClientRect();
+  const y = clientY - rect.top - GRID_HEADER_HEIGHT;
+  const slotIndex = Math.floor(y / SLOT_HEIGHT);
+  const minutes = OPEN_MINUTES + slotIndex * 60;
+  return Math.max(OPEN_MINUTES, Math.min(minutes, CLOSE_MINUTES - 60));
+}
+
 function getBlockTop(startMinutes) {
   return GRID_HEADER_HEIGHT + ((startMinutes - OPEN_MINUTES) / DROP_SNAP_MINUTES) * SLOT_HEIGHT + APPOINTMENT_BLOCK_INSET / 2;
 }
@@ -825,6 +1465,54 @@ function getBlockTop(startMinutes) {
 function getBlockHeight(appointment) {
   const duration = timeToMinutes(appointment.end) - timeToMinutes(appointment.start);
   return Math.max(64, (duration / DROP_SNAP_MINUTES) * SLOT_HEIGHT - APPOINTMENT_BLOCK_INSET);
+}
+
+// Distribui atendimentos sobrepostos (mesmo dia+sala+horário) em "faixas" paralelas, para
+// aparecerem lado a lado em vez de empilhados. Cobre duplicados e sobreposições parciais.
+// Retorna [{ appointment, lane, laneCount }].
+function layoutOverlaps(items) {
+  const sorted = [...items].sort(
+    (a, b) => timeToMinutes(a.start) - timeToMinutes(b.start) || timeToMinutes(a.end) - timeToMinutes(b.end),
+  );
+
+  const result = [];
+  let cluster = [];
+  let clusterEnd = -Infinity;
+
+  const flushCluster = () => {
+    if (!cluster.length) {
+      return;
+    }
+    const laneEnds = []; // fim (em minutos) do último atendimento de cada faixa
+    cluster.forEach((entry) => {
+      const start = timeToMinutes(entry.appointment.start);
+      let lane = laneEnds.findIndex((end) => end <= start);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(0);
+      }
+      laneEnds[lane] = timeToMinutes(entry.appointment.end);
+      entry.lane = lane;
+    });
+    cluster.forEach((entry) => {
+      entry.laneCount = laneEnds.length;
+      result.push(entry);
+    });
+    cluster = [];
+  };
+
+  sorted.forEach((appointment) => {
+    const start = timeToMinutes(appointment.start);
+    const end = timeToMinutes(appointment.end);
+    if (cluster.length && start >= clusterEnd) {
+      flushCluster();
+    }
+    cluster.push({ appointment, lane: 0, laneCount: 1 });
+    clusterEnd = cluster.length === 1 ? end : Math.max(clusterEnd, end);
+  });
+  flushCluster();
+
+  return result;
 }
 
 function updateDropPreview(column, room, clientY) {
@@ -1170,16 +1858,26 @@ function createColumnHeading(title, subtitle) {
   return heading;
 }
 
-function createAppointmentBlock(appointment, roomClassName) {
+function createAppointmentBlock(appointment, roomClassName, lane = 0, laneCount = 1) {
   const block = document.createElement("button");
   block.type = "button";
   block.className = `appointment-block ${roomClassName}`;
   block.style.top = `${getBlockTop(timeToMinutes(appointment.start))}px`;
   block.style.height = `${getBlockHeight(appointment)}px`;
+
+  // Sobreposição (duplicados / mesmo horário): divide a largura da coluna em faixas lado a lado.
+  if (laneCount > 1) {
+    const inset = APPOINTMENT_BLOCK_INSET;
+    const gap = 4;
+    const laneWidth = `((100% - ${inset * 2}px - ${(laneCount - 1) * gap}px) / ${laneCount})`;
+    block.style.left = `calc(${inset}px + ${lane} * (${laneWidth} + ${gap}px))`;
+    block.style.width = `calc(${laneWidth})`;
+    block.style.right = "auto";
+  }
+
   block.title = "Editar atendimento";
   block.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
   block.innerHTML = `
-    <span class="block-time">${appointment.start} - ${appointment.end}</span>
     <span class="block-patient">${escapeHtml(appointment.patient)}</span>
     <span class="block-meta">${escapeHtml(appointment.psychologist)}</span>
   `;
@@ -1282,35 +1980,37 @@ function createMobileAppointmentCard(appointment) {
   main.setAttribute("aria-label", getAppointmentActionLabel("Editar", appointment));
   main.addEventListener("click", (event) => editAppointment(appointment.id, event.currentTarget));
 
-  const top = document.createElement("div");
-  top.className = "mobile-card-top";
+  // Coluna esquerda: sala (título) + hora de início + término
+  const timeCol = document.createElement("div");
+  timeCol.className = "mobile-card-timecol";
 
-  const time = document.createElement("span");
-  time.className = "mobile-card-time";
-  time.textContent = `${appointment.start} - ${appointment.end}`;
+  const roomTitle = document.createElement("span");
+  roomTitle.className = "mobile-card-room";
+  roomTitle.textContent = getRoomName(appointment.room);
 
-  const roomBadge = document.createElement("span");
-  roomBadge.className = "room-badge";
-  roomBadge.textContent = getRoomName(appointment.room);
+  const start = document.createElement("span");
+  start.className = "mobile-card-start";
+  start.textContent = appointment.start;
+
+  timeCol.append(roomTitle, start);
+
+  // Coluna direita: paciente + profissional
+  const infoCol = document.createElement("div");
+  infoCol.className = "mobile-card-info";
 
   const patient = document.createElement("h3");
   patient.textContent = appointment.patient;
 
   const meta = document.createElement("p");
   meta.className = "mobile-card-meta";
-  meta.textContent = appointment.psychologist || "Profissional não informada";
+  meta.innerHTML =
+    '<svg class="meta-pin" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z"></path><circle cx="12" cy="11" r="2"></circle></svg>';
+  meta.append(document.createTextNode(appointment.psychologist || "Profissional não informada"));
 
-  top.append(time, roomBadge);
-  main.append(top, patient, meta);
+  infoCol.append(patient, meta);
 
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.className = "mobile-delete-button";
-  remove.textContent = "Excluir";
-  remove.setAttribute("aria-label", getAppointmentActionLabel("Excluir", appointment));
-  remove.addEventListener("click", () => deleteAppointment(appointment.id));
-
-  card.append(main, remove);
+  main.append(timeCol, infoCol);
+  card.append(main);
   return card;
 }
 
@@ -1358,13 +2058,14 @@ async function refreshAppointments(options = {}) {
     render();
     setStorageStatus();
   } catch (error) {
-    appointments = loadLocalAppointments();
-    render();
-    setSyncStatus("Erro na planilha", "error");
-
+    // No auto-refresh silencioso (60s), NÃO troca os dados remotos já carregados por dados locais
+    // — uma falha de rede transitória não pode sobrescrever a planilha em memória.
     if (!options.silent) {
+      appointments = loadLocalAppointments();
+      render();
       showFeedback(error.message || "Nao foi possivel carregar a planilha.", "error");
     }
+    setSyncStatus("Erro na planilha", "error");
   }
 }
 
@@ -1375,11 +2076,6 @@ async function loadAppointments() {
   }
 
   const response = await fetchRemoteList();
-
-  if (Array.isArray(response)) {
-    remoteBackendMode = "legacy";
-    return normalizeAppointments(response);
-  }
 
   if (response.ok) {
     remoteBackendMode = "modern";
@@ -1408,13 +2104,6 @@ async function persistAppointment(appointment) {
     await loadAppointments();
   }
 
-  if (remoteBackendMode === "legacy") {
-    const nextAppointments = upsertAppointment(appointments, appointment);
-    await writeLegacyAppointments(nextAppointments);
-    setSyncStatus("Planilha legado", "online");
-    return nextAppointments;
-  }
-
   const response = await apiRequest("save", appointment);
   setSyncStatus("Planilha sincronizada", "online");
   return normalizeAppointments(response.appointments || []);
@@ -1429,12 +2118,6 @@ async function removeAppointment(id) {
 
   if (remoteBackendMode === "unknown") {
     await loadAppointments();
-  }
-
-  if (remoteBackendMode === "legacy") {
-    const nextAppointments = appointments.filter((item) => item.id !== id);
-    await writeLegacyAppointments(nextAppointments);
-    return nextAppointments;
   }
 
   const response = await apiRequest("delete", { id });
@@ -1481,27 +2164,6 @@ async function fetchRemoteList() {
   } catch {
     return jsonpRequest("list", {});
   }
-}
-
-async function writeLegacyAppointments(nextAppointments) {
-  const payload = nextAppointments.map((appointment) => ({
-    date: appointment.date,
-    startTime: appointment.start,
-    endTime: appointment.end,
-    patient: appointment.patient,
-    room: getRoomName(appointment.room),
-  }));
-
-  await fetch(CONFIG.apiUrl, {
-    body: JSON.stringify(payload),
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    method: "POST",
-    mode: "no-cors",
-  });
-
-  saveLocalAppointments(nextAppointments);
 }
 
 async function apiRequest(action, payload = {}, allowAccessKeyRetry = true) {
@@ -1655,27 +2317,8 @@ function cleanLookupError(value) {
   return /^#N\/A(?:\s*\(\))?$/.test(text) ? "" : text;
 }
 
-function getAppointmentsForSelectedPeriod() {
-  const visibleAppointments = filterAppointments(appointments);
-
-  if (currentView === "day") {
-    return visibleAppointments.filter((item) => item.date === selectedDate);
-  }
-
-  if (currentView === "month") {
-    const base = parseDate(selectedDate);
-    return visibleAppointments.filter((item) => {
-      const date = parseDate(item.date);
-      return date.getFullYear() === base.getFullYear() && date.getMonth() === base.getMonth();
-    });
-  }
-
-  const weekDates = new Set(getWeekDates(selectedDate).map(toDateInputValue));
-  return visibleAppointments.filter((item) => weekDates.has(item.date));
-}
-
 function getVisibleRooms() {
-  const filter = elements.filterRoom.value;
+  const filter = elements.filterRoom ? elements.filterRoom.value : "all";
   return filter === "all" ? ROOMS : ROOMS.filter((room) => room.id === filter);
 }
 
@@ -1686,7 +2329,7 @@ function isAllowedRoomId(roomId) {
 function filterAppointments(items) {
   let filtered = items;
 
-  const roomFilter = elements.filterRoom.value;
+  const roomFilter = elements.filterRoom ? elements.filterRoom.value : "all";
   if (roomFilter !== "all") {
     filtered = filtered.filter((item) => item.room === roomFilter);
   }
@@ -1767,25 +2410,33 @@ function normalizeNameKey(value) {
 }
 
 function populatePsychologistFilter() {
-  const select = elements.filterPsychologist;
-  if (!select) return;
-
-  const currentValue = select.value || "all";
-  select.innerHTML = '<option value="all">Todas</option>';
+  const input = elements.filterPsychologist;
+  if (!input || !elements.filterPsychologistMenu) return;
 
   const psychologists = getPsychologistNames();
+  const signature = psychologists.join("|");
 
-  psychologists.forEach((psy) => {
-    const option = document.createElement("option");
-    option.value = psy;
-    option.textContent = psy;
-    select.append(option);
-  });
+  // valor atual ainda válido? senão volta pra "Todas"
+  const currentValue = input.value || "all";
+  const match = psychologists.find((name) => normalizeNameKey(name) === normalizeNameKey(currentValue));
+  const value = currentValue === "all" ? "all" : match || "all";
+  input.value = value;
+  if (elements.filterPsychologistLabel) {
+    elements.filterPsychologistLabel.textContent = value === "all" ? "Todas" : value;
+  }
 
-  if (psychologists.some((name) => normalizeNameKey(name) === normalizeNameKey(currentValue))) {
-    select.value = psychologists.find((name) => normalizeNameKey(name) === normalizeNameKey(currentValue));
+  // só reconstrói o menu quando a lista de nomes muda (não atrapalha quando está aberto)
+  if (signature !== lastPsychologistOptions) {
+    lastPsychologistOptions = signature;
+    const options = [
+      { value: "all", label: "Todas" },
+      ...psychologists.map((name) => ({ value: name, label: name })),
+    ];
+    buildFilterMenu(elements.filterPsychologistMenu, options, value, (v, t) =>
+      applyFilterSelection(elements.filterPsychologist, elements.filterPsychologistLabel, elements.filterPsychologistMenu, v, t),
+    );
   } else {
-    select.value = "all";
+    markFilterActive(elements.filterPsychologistMenu, value);
   }
 }
 
@@ -1830,12 +2481,15 @@ function setStorageStatus(state = "") {
     return;
   }
 
-  setSyncStatus(remoteBackendMode === "legacy" ? "Planilha legado" : "Planilha", "online");
+  setSyncStatus("Planilha", "online");
 }
 
 function setSyncStatus(message, state) {
   elements.syncStatus.textContent = message;
   elements.syncStatus.dataset.state = state;
+  // Espelha o estado no <body>: no mobile o topbar (marca) só some quando
+  // ocioso/carregado (online/local); some-se durante load/erro ele aparece.
+  document.body.dataset.sync = state;
 }
 
 function setFormBusy(isBusy) {
@@ -1853,6 +2507,9 @@ function showFeedback(message, type) {
 }
 
 function timeToMinutes(value) {
+  if (typeof value !== "string" || !/^\d{1,2}:\d{2}$/.test(value)) {
+    return 0; // entrada inválida não propaga NaN para ordenação/layout
+  }
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
 }
@@ -1903,13 +2560,8 @@ function getMonthCalendarDates(dateValue) {
   });
 }
 
-function formatLongDate(value) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(parseDate(value));
+function capitalizeFirst(value) {
+  return value ? value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1) : value;
 }
 
 function formatDate(value) {
@@ -1932,17 +2584,23 @@ function getRoomName(id) {
 }
 
 function getRoomColor(className) {
+  // Mesma ordem das salas das variáveis CSS --cyan/--purple/--magenta/--blue
+  // no tema "Therapeutic Modernism": sálvia, bege, terracota e teal.
   const colors = {
-    "room-1": "oklch(0.58 0.14 221)",
-    "room-2": "oklch(0.55 0.17 294)",
-    "room-3": "oklch(0.58 0.2 333)",
-    "room-4": "oklch(0.55 0.15 259)",
+    "room-1": "oklch(0.478 0.049 149)",
+    "room-2": "oklch(0.484 0.042 84)",
+    "room-3": "oklch(0.492 0.097 43)",
+    "room-4": "oklch(0.493 0.052 182)",
   };
-  return colors[className] || "oklch(0.58 0.14 221)";
+  return colors[className] || "oklch(0.478 0.049 149)";
 }
 
 function isMobileLayout() {
   return window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+}
+
+function isMobileLandscape() {
+  return window.matchMedia(MOBILE_LANDSCAPE_QUERY).matches;
 }
 
 function normalize(value) {

@@ -1,50 +1,56 @@
 :root {
-  --bg: rgb(247 249 252);
-  --surface: rgb(251 252 255);
-  --surface-strong: rgb(254 252 255);
-  --surface-soft: rgb(239 246 252);
-  --ink: rgb(30 45 63);
-  --muted: rgb(100 114 135);
-  --line: rgb(216 225 236);
-  --line-strong: rgb(185 199 216);
-  --cyan: rgb(11 159 208);
-  --cyan-dark: rgb(8 125 165);
-  --purple: rgb(131 89 221);
-  --purple-dark: rgb(100 65 180);
-  --magenta: rgb(209 27 213);
-  --blue: rgb(47 115 198);
-  --warning: rgb(183 121 31);
-  --danger: rgb(178 65 88);
-  --on-accent: rgb(251 252 255);
-  --shadow: 0 16px 38px rgb(38 64 93 / 0.11);
-  --radius: 8px;
+  /* Tema "Therapeutic Modernism": sálvia, creme, bege e terracota.
+     Os nomes --cyan/--purple/--magenta/--blue foram mantidos por
+     compatibilidade, mas agora carregam, na ordem das salas 1..4:
+     sálvia (primary), bege (secondary), terracota (tertiary) e teal. */
+  --bg: rgb(247 250 248);
+  --surface: rgb(255 255 255);
+  --surface-strong: rgb(255 255 255);
+  --surface-soft: rgb(241 244 242);
+  --ink: rgb(24 28 28);
+  --muted: rgb(66 72 66);
+  --line: rgb(194 200 192);
+  --line-strong: rgb(115 121 114);
+  --cyan: rgb(74 101 78);
+  --cyan-dark: rgb(35 61 41);
+  --purple: rgb(106 93 67);
+  --purple-dark: rgb(81 69 45);
+  --magenta: rgb(142 77 49);
+  --blue: rgb(62 107 99);
+  --warning: rgb(142 106 49);
+  --danger: rgb(186 26 26);
+  --on-accent: rgb(255 255 255);
+  --shadow: 0 10px 40px rgb(74 101 78 / 0.12);
+  --radius: 12px;
+  --radius-lg: 16px;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --slot-height: 86px;
-  font-family:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   color: var(--ink);
   background: var(--bg);
 }
 
 @supports (color: oklch(0.5 0.1 200)) {
   :root {
-    --bg: oklch(0.975 0.012 235);
-    --surface: oklch(0.992 0.006 235);
-    --surface-strong: oklch(0.998 0.007 235);
-    --surface-soft: oklch(0.955 0.018 235);
-    --ink: oklch(0.25 0.036 246);
-    --muted: oklch(0.51 0.035 246);
-    --line: oklch(0.88 0.024 238);
-    --line-strong: oklch(0.78 0.034 238);
-    --cyan: oklch(0.58 0.14 221);
-    --cyan-dark: oklch(0.47 0.12 221);
-    --purple: oklch(0.55 0.17 294);
-    --purple-dark: oklch(0.45 0.15 294);
-    --magenta: oklch(0.58 0.2 333);
-    --blue: oklch(0.55 0.15 259);
-    --warning: oklch(0.57 0.12 72);
-    --danger: oklch(0.5 0.14 14);
-    --on-accent: oklch(0.992 0.006 235);
-    --shadow: 0 16px 38px color-mix(in oklch, var(--ink) 12%, transparent);
+    --bg: oklch(0.982 0.004 157);
+    --surface: oklch(1 0 0);
+    --surface-strong: oklch(1 0 0);
+    --surface-soft: oklch(0.964 0.004 157);
+    --ink: oklch(0.222 0.006 197);
+    --muted: oklch(0.394 0.013 145);
+    --line: oklch(0.826 0.013 138);
+    --line-strong: oklch(0.569 0.013 141);
+    --cyan: oklch(0.478 0.049 149);
+    --cyan-dark: oklch(0.332 0.048 150);
+    --purple: oklch(0.484 0.042 84);
+    --purple-dark: oklch(0.396 0.041 84);
+    --magenta: oklch(0.492 0.097 43);
+    --blue: oklch(0.493 0.052 182);
+    --warning: oklch(0.549 0.087 77);
+    --danger: oklch(0.506 0.193 28);
+    --on-accent: oklch(1 0 0);
+    --shadow: 0 10px 40px color-mix(in oklch, var(--cyan) 16%, transparent);
   }
 }
 
@@ -116,30 +122,20 @@ textarea:focus-visible,
   min-width: 0;
 }
 
-.brand-logo {
-  width: 54px;
-  height: 54px;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in oklch, var(--cyan) 22%, var(--line));
-  border-radius: 16px;
-  background: var(--surface-strong);
-  object-fit: contain;
-  padding: 6px;
-  box-shadow: 0 10px 24px color-mix(in oklch, var(--ink) 10%, transparent);
-}
-
-.brand-context {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 750;
-}
-
 h1,
 h2,
 h3,
 p {
   margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+.current-period,
+.column-heading strong {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 h1 {
@@ -153,10 +149,7 @@ h2 {
   font-size: 1rem;
 }
 
-.date-controls,
-.view-tabs,
-.appointment-actions,
-.schedule-tools {
+.appointment-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -197,8 +190,6 @@ h2 {
   color: var(--danger);
 }
 
-.icon-button,
-.today-button,
 .ghost-button,
 .primary-button,
 .new-appointment-button,
@@ -216,14 +207,6 @@ h2 {
     transform 140ms ease;
 }
 
-.icon-button {
-  width: 40px;
-  padding: 6px;
-  font-size: 1.8rem;
-  line-height: 1;
-}
-
-.today-button,
 .ghost-button,
 .new-appointment-button,
 .tab-button,
@@ -232,8 +215,6 @@ h2 {
   font-weight: 700;
 }
 
-.icon-button:hover,
-.today-button:hover,
 .ghost-button:hover,
 .new-appointment-button:hover,
 .tab-button:hover,
@@ -297,40 +278,6 @@ h2 {
   align-items: start;
 }
 
-.app-shell.form-open .workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
-  max-width: 1480px;
-}
-
-.app-shell.form-open .schedule-area {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.app-shell.form-open .schedule-form-panel {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.app-shell.form-open .schedule-toolbar {
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.app-shell.form-open .schedule-tools {
-  flex-wrap: wrap;
-  justify-content: flex-start;
-}
-
-.app-shell.form-open .toolbar-filter {
-  flex: 1 1 180px;
-}
-
-.app-shell.form-open .view-tabs {
-  flex: 1 1 360px;
-}
-
-.schedule-form-panel,
 .schedule-area {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -339,22 +286,68 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+/* Painel "Novo atendimento" como card flutuante (altura relativa à janela) */
 .schedule-form-panel {
-  position: sticky;
-  top: 96px;
-  z-index: 5;
-  width: 100%;
-  max-height: calc(100vh - 118px);
+  position: fixed;
+  top: 50%;
+  right: 24px;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100% - 48px));
+  height: calc(100vh - 32px);
+  height: calc(100dvh - 32px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 64px color-mix(in oklch, var(--ink) 22%, transparent);
+  animation: modal-pop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cabeçalho fixo no topo, corpo rolável, ações fixas embaixo */
+.schedule-form-panel form {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
   overflow-y: auto;
-  padding: 18px;
+  padding: 16px 18px 18px;
+}
+
+.schedule-form-panel .form-feedback {
+  margin-top: auto;
 }
 
 .schedule-form-panel.is-hidden {
   display: none;
 }
 
-.app-shell.form-open::before {
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Fundo escurecido (scrim) atrás do drawer */
+.form-scrim {
   display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in oklch, var(--ink) 38%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.app-shell.form-open .form-scrim {
+  display: block;
 }
 
 .panel-actions {
@@ -363,8 +356,7 @@ h2 {
   gap: 8px;
 }
 
-.panel-header,
-.schedule-toolbar {
+.panel-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -372,7 +364,10 @@ h2 {
 }
 
 .panel-header {
-  margin-bottom: 18px;
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 form {
@@ -421,6 +416,104 @@ textarea:focus {
   gap: 10px;
 }
 
+/* Seletor de Sala (lista com status livre/ocupada) */
+.room-field {
+  display: grid;
+  gap: 7px;
+}
+
+.room-field .field-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.room-options {
+  display: grid;
+  gap: 6px;
+}
+
+.room-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.room-option:hover {
+  border-color: var(--cyan);
+}
+
+.room-option.is-selected {
+  border-color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 8%, var(--surface));
+}
+
+.room-option-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.room-option-name::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--cyan);
+}
+
+.room-option.room-1 .room-option-name::before {
+  background: var(--cyan);
+}
+
+.room-option.room-2 .room-option-name::before {
+  background: var(--purple);
+}
+
+.room-option.room-3 .room-option-name::before {
+  background: var(--magenta);
+}
+
+.room-option.room-4 .room-option-name::before {
+  background: var(--blue);
+}
+
+.room-status {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.room-status.is-free {
+  background: color-mix(in oklch, var(--cyan) 14%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+.room-status.is-occupied {
+  background: color-mix(in oklch, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+  border-color: color-mix(in oklch, var(--danger) 32%, var(--line));
+}
+
 .form-feedback {
   min-height: 22px;
   color: var(--danger);
@@ -434,50 +527,14 @@ textarea:focus {
 
 .schedule-area {
   min-width: 0;
-  overflow: hidden;
-}
-
-.schedule-toolbar {
-  padding: 18px;
-  border-bottom: 1px solid var(--line);
+  /* overflow visível: permite que o cabeçalho do workspace faça sticky no topo da página */
+  overflow: visible;
 }
 
 .current-period {
   margin-bottom: 9px;
   font-size: 1.05rem;
   font-weight: 900;
-}
-
-.summary-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.summary-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-strong);
-  color: var(--muted);
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.summary-pill strong {
-  color: var(--ink);
-  margin-right: 4px;
-}
-
-.view-tabs {
-  flex: 0 0 auto;
-  padding: 5px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-soft);
 }
 
 .toolbar-filter {
@@ -488,12 +545,6 @@ textarea:focus {
   font-size: 0.78rem;
   font-weight: 900;
   text-transform: uppercase;
-}
-
-.toolbar-filter select {
-  min-width: 150px;
-  min-height: 38px;
-  background: var(--surface-strong);
 }
 
 .tab-button {
@@ -531,11 +582,13 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-strong);
-  overflow: hidden;
+  /* overflow visível: deixa o .grid-head fazer sticky relativo ao .day-grid-wrap */
 }
 
 .day-grid-wrap {
-  overflow-x: auto;
+  /* scroll interno (vertical + horizontal): o cabeçalho das salas (.grid-head) gruda no topo da grade */
+  overflow: auto;
+  max-height: calc(100dvh - 128px);
 }
 
 .time-column,
@@ -549,6 +602,7 @@ textarea:focus {
   background-image: linear-gradient(to bottom, transparent calc(var(--slot-height) - 1px), var(--line) 1px);
   background-position: 0 42px;
   background-size: 100% var(--slot-height);
+  cursor: pointer; /* dica de "clique para criar"; os blocos sobrescrevem com cursor: grab */
 }
 
 .grid-head {
@@ -618,14 +672,9 @@ textarea:focus {
   background: color-mix(in oklch, var(--blue) 11%, var(--surface));
 }
 
-.block-time,
 .block-meta {
   font-size: 0.76rem;
   line-height: 1.2;
-}
-
-.block-time {
-  font-weight: 900;
 }
 
 .block-patient {
@@ -661,6 +710,11 @@ textarea:focus {
   pointer-events: none;
   font-size: 0.78rem;
   font-weight: 950;
+}
+
+/* fantasma de hover (clique-para-criar): um pouco mais discreto que o preview de arrasto */
+.drop-preview.ghost {
+  opacity: 0.85;
 }
 
 .drop-preview.room-2 {
@@ -914,44 +968,39 @@ textarea:focus {
 }
 
 .mobile-appointment-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-left: 4px solid var(--cyan);
+  border-radius: 12px;
   background: var(--surface-strong);
   box-shadow: 0 8px 18px rgb(30 45 63 / 0.07);
   box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 7%, transparent);
 }
 
 .mobile-appointment-card.room-1 {
-  border-color: color-mix(in oklch, var(--cyan) 38%, var(--line));
+  border-left-color: var(--cyan);
 }
 
 .mobile-appointment-card.room-2 {
-  border-color: color-mix(in oklch, var(--purple) 38%, var(--line));
+  border-left-color: var(--purple);
 }
 
 .mobile-appointment-card.room-3 {
-  border-color: color-mix(in oklch, var(--magenta) 34%, var(--line));
+  border-left-color: var(--magenta);
 }
 
 .mobile-appointment-card.room-4 {
-  border-color: color-mix(in oklch, var(--blue) 34%, var(--line));
-}
-
-.mobile-card-main,
-.mobile-delete-button {
-  border: 0;
-  border-radius: 0;
+  border-left-color: var(--blue);
 }
 
 .mobile-card-main {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-  min-height: 88px;
-  padding: 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 14px;
   background: transparent;
   color: var(--ink);
   text-align: left;
@@ -962,87 +1011,189 @@ textarea:focus {
   background: color-mix(in oklch, var(--cyan) 7%, transparent);
 }
 
-.mobile-card-top {
+/* Coluna esquerda (bloco da sala + hora) — assume a cor da sala */
+.mobile-card-timecol {
+  flex: 0 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 76px;
+  padding-right: 14px;
+  border-right: 1px solid var(--line);
 }
 
-.mobile-card-time {
-  color: var(--cyan-dark);
-  font-size: 0.8rem;
-  font-weight: 950;
-}
-
-.room-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  max-width: 48%;
-  border: 1px solid var(--line);
+.mobile-card-room {
+  padding: 2px 8px;
   border-radius: 999px;
-  background: var(--surface-soft);
-  color: var(--muted);
-  padding: 5px 8px;
-  overflow: hidden;
-  font-size: 0.72rem;
-  font-weight: 900;
-  text-overflow: ellipsis;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  text-transform: uppercase;
   white-space: nowrap;
+  background: color-mix(in oklch, var(--cyan) 16%, var(--surface));
+  color: var(--cyan-dark);
 }
 
-.mobile-appointment-card.room-1 .room-badge {
-  border-color: color-mix(in oklch, var(--cyan) 32%, var(--line));
-  background: color-mix(in oklch, var(--cyan) 11%, var(--surface));
+.mobile-appointment-card.room-2 .mobile-card-room {
+  background: color-mix(in oklch, var(--purple) 18%, var(--surface));
+  color: var(--purple-dark);
 }
 
-.mobile-appointment-card.room-2 .room-badge {
-  border-color: color-mix(in oklch, var(--purple) 30%, var(--line));
-  background: color-mix(in oklch, var(--purple) 11%, var(--surface));
+.mobile-appointment-card.room-3 .mobile-card-room {
+  background: color-mix(in oklch, var(--magenta) 16%, var(--surface));
+  color: var(--magenta);
 }
 
-.mobile-appointment-card.room-3 .room-badge {
-  border-color: color-mix(in oklch, var(--magenta) 28%, var(--line));
-  background: color-mix(in oklch, var(--magenta) 9%, var(--surface));
+.mobile-appointment-card.room-4 .mobile-card-room {
+  background: color-mix(in oklch, var(--blue) 16%, var(--surface));
+  color: var(--blue);
 }
 
-.mobile-appointment-card.room-4 .room-badge {
-  border-color: color-mix(in oklch, var(--blue) 30%, var(--line));
-  background: color-mix(in oklch, var(--blue) 10%, var(--surface));
+.mobile-card-start {
+  color: var(--cyan-dark);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.05;
 }
 
-.mobile-card-main h3 {
+.mobile-appointment-card.room-2 .mobile-card-start {
+  color: var(--purple-dark);
+}
+
+.mobile-appointment-card.room-3 .mobile-card-start {
+  color: var(--magenta);
+}
+
+.mobile-appointment-card.room-4 .mobile-card-start {
+  color: var(--blue);
+}
+
+/* Coluna direita: paciente + profissional */
+.mobile-card-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-card-info h3 {
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: 1.1rem;
   line-height: 1.2;
 }
 
 .mobile-card-meta {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: 0.85rem;
+  font-weight: 600;
   line-height: 1.25;
 }
 
-.mobile-delete-button {
-  min-width: 74px;
-  border-left: 1px solid var(--line);
-  background: rgb(178 65 88 / 0.07);
-  background: color-mix(in oklch, var(--danger) 7%, var(--surface));
-  color: var(--danger);
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  font-weight: 900;
+.meta-pin {
+  flex: 0 0 auto;
+  color: var(--muted);
 }
 
-.mobile-delete-button:active {
-  background: var(--danger);
-  color: var(--on-accent);
+/* Slot livre ("Horário disponível") na lista do Dia mobile */
+.mobile-free-slot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--surface-soft) 32%, transparent);
+  color: var(--muted);
+  text-align: left;
+  /* recua em relação aos atendimentos reais (sombreado, não chama atenção) */
+  opacity: 0.66;
+}
+
+.mobile-free-slot:active {
+  opacity: 1; /* ao tocar pra agendar, volta ao normal */
+  background: color-mix(in oklch, var(--cyan) 8%, transparent);
+}
+
+.free-slot-time {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 64px;
+  padding-right: 14px;
+  border-right: 1px dashed var(--line);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--muted);
+}
+
+.free-slot-time small {
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.free-slot-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.free-slot-text strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.free-slot-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 1px;
+}
+
+.free-room-tag {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* mantém a cor de cada sala, porém branda (a opacidade do card ainda suaviza mais) */
+.free-room-tag.room-1 {
+  background: color-mix(in oklch, var(--cyan) 13%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+.free-room-tag.room-2 {
+  background: color-mix(in oklch, var(--purple) 14%, var(--surface));
+  color: var(--purple-dark);
+}
+
+.free-room-tag.room-3 {
+  background: color-mix(in oklch, var(--magenta) 13%, var(--surface));
+  color: var(--magenta);
+}
+
+.free-room-tag.room-4 {
+  background: color-mix(in oklch, var(--blue) 13%, var(--surface));
+  color: var(--blue);
 }
 
 /* Botão Flutuante (FAB) para Mobile */
@@ -1109,7 +1260,7 @@ textarea:focus {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 720px) and (orientation: portrait) {
   .app-shell {
     padding:
       max(10px, env(safe-area-inset-top))
@@ -1123,8 +1274,6 @@ textarea:focus {
   .topbar,
   .workspace,
   .schedule-area,
-  .schedule-toolbar,
-  .schedule-tools,
   .schedule-content {
     width: 100%;
     max-width: 100%;
@@ -1167,100 +1316,22 @@ textarea:focus {
     justify-self: start;
   }
 
-  .date-controls {
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
-    width: 100%;
-    min-width: 0;
-  }
-
   .new-appointment-button {
     display: none !important;
   }
 
+  /* No vertical, o agendamento é feito pelos slots "Horário disponível" — sem FAB */
   .fab-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: auto;
-    min-width: 116px;
-    height: 52px;
-    padding: 8px 18px;
-    border-radius: 999px;
-    right: max(16px, env(safe-area-inset-right));
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    font-size: 0.95rem;
-    font-weight: 900;
-  }
-
-  .form-panel-open .fab-button {
     display: none;
-  }
-
-  .notice-open .fab-button {
-    display: none;
-  }
-
-  .fab-button span:first-child {
-    margin-top: -1px;
-    font-size: 1.25rem;
-    line-height: 1;
-  }
-
-  .fab-label {
-    display: inline;
-    margin-top: 0;
-  }
-
-  .brand-logo {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
   }
 
   .brand-lockup h1 {
     font-size: 1.35rem;
   }
 
-  .schedule-toolbar {
-    padding: 12px;
-    align-items: stretch;
-    flex-direction: column;
-    gap: 12px;
-    border-radius: 12px;
-    background: rgb(251 252 255 / 0.96);
-    background: color-mix(in oklch, var(--surface) 96%, transparent);
-    overflow: hidden;
-  }
-
   .current-period {
     font-size: 0.95rem;
     margin-bottom: 6px;
-  }
-
-  .summary-strip {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 6px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .summary-strip::-webkit-scrollbar {
-    display: none;
-  }
-
-  .summary-pill {
-    flex: 0 0 auto;
-    font-size: 0.75rem;
-  }
-
-  .schedule-tools {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
   }
 
   .toolbar-filter {
@@ -1271,33 +1342,12 @@ textarea:focus {
     min-width: 0;
   }
 
-  .toolbar-filter select {
-    flex: 1;
-    max-width: none;
-    min-width: 0;
-    min-height: 36px;
-  }
-
-  .view-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .today-button,
   .tab-button {
     flex: 1;
     min-width: 0;
     min-height: 44px;
     padding: 7px 4px;
     font-size: 0.82rem;
-  }
-
-  .icon-button {
-    width: 44px;
-    min-height: 44px;
   }
 
   .field-grid,
@@ -1319,42 +1369,25 @@ textarea:focus {
     min-width: 760px;
   }
 
-  /* Painel de Cadastro Mobile (Gaveta Inferior) */
+  /* Painel "Novo atendimento" no mobile: quase toda a área do navegador */
   .schedule-form-panel {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 60;
-    width: 100%;
-    max-height: min(88vh, 760px);
-    transform: translateY(0);
-    border-radius: 18px 18px 0 0;
-    border-bottom: none;
-    padding: 18px 14px calc(28px + env(safe-area-inset-bottom));
-    box-shadow: 0 -8px 26px rgb(20 33 49 / 0.18);
-    box-shadow: 0 -8px 26px color-mix(in oklch, var(--ink) 18%, transparent);
-    animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    top: 50%;
+    right: 12px;
+    left: 12px;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: auto;
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+    border-radius: 20px;
   }
 
-  .panel-header {
-    position: sticky;
-    top: -18px;
-    z-index: 2;
-    margin: -18px -14px 14px;
-    padding: 16px 14px 12px;
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
+  .schedule-form-panel .panel-header {
+    padding: 16px 16px 12px;
   }
 
-  .form-actions-row {
-    position: sticky;
-    bottom: calc(-28px - env(safe-area-inset-bottom));
-    margin: 4px -14px calc(-28px - env(safe-area-inset-bottom));
-    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--line);
-    background: var(--surface);
+  .schedule-form-panel form {
+    padding: 14px 16px 16px;
   }
 
   .global-notice {
@@ -1362,26 +1395,6 @@ textarea:focus {
     right: 12px;
     bottom: calc(14px + env(safe-area-inset-bottom));
     width: auto;
-  }
-
-  @keyframes slide-up {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
-  }
-
-  .app-shell.form-open::before {
-    content: "";
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    background: rgb(20 33 49 / 0.38);
-    background: color-mix(in oklch, var(--ink) 38%, transparent);
-    backdrop-filter: blur(2px);
   }
 }
 
@@ -1492,8 +1505,6 @@ textarea:focus {
 }
 
 @media (pointer: coarse) {
-  .icon-button,
-  .today-button,
   .ghost-button,
   .primary-button,
   .new-appointment-button,
@@ -1503,5 +1514,722 @@ textarea:focus {
   select,
   textarea {
     min-height: 44px;
+  }
+}
+
+/* ==============================================================
+   Camada de layout — redesign "Stitch / Therapeutic Modernism"
+   Complementa e sobrescreve as regras acima (vence na cascata).
+   ============================================================== */
+
+:root {
+  --room-1-fill: #d8ecda; /* sálvia */
+  --room-2-fill: #f4e3c6; /* bege  */
+  --room-3-fill: #ffded0; /* terracota */
+  --room-4-fill: #d3eae3; /* teal  */
+}
+
+/* --- Top nav (barra superior full-bleed) --- */
+.topbar {
+  position: static;
+  display: block;
+  max-width: none;
+  margin: -22px -22px 22px;
+  padding: 0 22px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 6px 24px color-mix(in oklch, var(--cyan) 9%, transparent);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  max-width: 1480px;
+  min-height: 72px;
+  margin: 0 auto;
+}
+
+.brand-lockup {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.05;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+
+.brand-eyebrow {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* --- Sync pill com ícone --- */
+.sync-status {
+  gap: 6px;
+  border-color: transparent;
+  background: var(--surface-soft);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sync-status::before {
+  content: "↻";
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.sync-status[data-state="online"] {
+  background: color-mix(in oklch, var(--cyan) 12%, var(--surface));
+}
+
+/* --- Botões em pílula --- */
+.new-appointment-button,
+.primary-button {
+  border-radius: 999px;
+}
+
+.new-appointment-button {
+  padding: 9px 18px;
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--cyan) 24%, transparent);
+}
+
+/* --- Cabeçalho do workspace (linha única: calendário · datas · abas) --- */
+/* Fica preso no topo ao rolar (o topbar some); cobre o conteúdo que passa por baixo. */
+.workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+  border-bottom: 1px solid var(--line);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- Faixa de datas (seletor de dia) --- */
+.date-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  /* altura fixa pras duas visões (faixa de datas e filtro) não deslocarem a linha */
+  min-height: 54px;
+}
+
+.calendar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.strip-arrow {
+  flex: 0 0 auto;
+  width: 36px;
+  min-height: 36px;
+  border-color: transparent;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.strip-arrow:hover {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--cyan) 14%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+.date-strip {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  padding: 4px 2px;
+}
+
+.date-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.day-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 58px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  padding: 8px 10px;
+  scroll-snap-align: center;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.day-chip:hover {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--cyan) 12%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+.day-chip-weekday {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+.day-chip-number {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.day-chip.is-today:not(.is-selected) {
+  border-color: color-mix(in oklch, var(--cyan) 40%, var(--line));
+}
+
+.day-chip.is-today:not(.is-selected) .day-chip-number {
+  color: var(--cyan-dark);
+}
+
+.day-chip.is-selected {
+  border-color: transparent;
+  background: var(--cyan);
+  color: var(--on-accent);
+}
+
+.day-chip.is-selected .day-chip-weekday {
+  opacity: 0.9;
+}
+
+.calendar-button {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.calendar-button:hover {
+  border-color: var(--cyan);
+  background: var(--surface-soft);
+  color: var(--cyan-dark);
+}
+
+.date-jump-input {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 46px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Coerência de altura entre os controles da linha --- */
+.day-chip {
+  min-height: 46px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  justify-content: center;
+}
+
+.strip-arrow {
+  min-height: 46px;
+}
+
+/* --- Seletor de visão (botão único + menu) --- */
+.view-select {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.view-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 116px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.view-select-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-dark);
+}
+
+.view-select-btn .chevron {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.view-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 45;
+  display: grid;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 16px 40px color-mix(in oklch, var(--ink) 16%, transparent);
+}
+
+.view-select-menu .tab-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  justify-content: flex-start;
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  text-align: left;
+}
+
+.view-select-menu .tab-button:hover {
+  border-color: transparent;
+  background: var(--surface-soft);
+  color: var(--cyan-dark);
+}
+
+.view-select-menu .tab-button.active,
+.view-select-menu .tab-button[aria-selected="true"] {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--cyan) 14%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+/* --- Botão de filtro (botão + popover) --- */
+.filter-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.filter-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.filter-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-dark);
+}
+
+.filter-btn.is-active {
+  border-color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 14%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+.filter-btn.is-active::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cyan);
+  border: 2px solid var(--surface);
+}
+
+.filter-btn[aria-expanded="true"] {
+  border-color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 14%, var(--surface));
+  color: var(--cyan-dark);
+}
+
+/* Filtro expandido inline — ocupa o espaço das datas */
+.filter-inline {
+  display: none;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.date-nav-row.is-filtering .strip-arrow,
+.date-nav-row.is-filtering .date-strip {
+  display: none;
+}
+
+.date-nav-row.is-filtering .filter-inline {
+  display: flex;
+}
+
+.filter-inline .toolbar-filter {
+  flex: 1 1 150px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.filter-inline .toolbar-filter > span {
+  flex: 0 0 auto;
+}
+
+.filter-inline .filter-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-inline .filter-actions .clear-filters,
+.filter-inline .filter-actions .apply-filters {
+  flex: 0 0 auto;
+  width: auto; /* anula o width:100% do .primary-button */
+  min-height: 46px;
+  border-radius: 999px;
+}
+
+/* --- Dropdowns de filtro (Sala/Psicólogo) — mesmo padrão do seletor de visão --- */
+.toolbar-filter .filter-select {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.filter-select .filter-select-btn {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.filter-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.filter-select .view-select-menu {
+  left: 0;
+  right: 0;
+  min-width: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.filter-select .view-select-menu .tab-button {
+  font-size: 0.85rem;
+}
+
+/* --- Blocos de atendimento (preenchimento vivo + barra lateral) --- */
+.appointment-block {
+  gap: 3px;
+  border: 1px solid transparent;
+  border-left: 4px solid var(--cyan);
+  border-radius: 10px;
+  background: var(--room-1-fill);
+  padding: 8px 10px 8px 12px;
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--cyan) 12%, transparent);
+}
+
+.appointment-block.room-1 {
+  border: 1px solid transparent;
+  border-left: 4px solid var(--cyan);
+  background: var(--room-1-fill);
+}
+
+.appointment-block.room-2 {
+  border: 1px solid transparent;
+  border-left: 4px solid var(--purple);
+  background: var(--room-2-fill);
+}
+
+.appointment-block.room-3 {
+  border: 1px solid transparent;
+  border-left: 4px solid var(--magenta);
+  background: var(--room-3-fill);
+}
+
+.appointment-block.room-4 {
+  border: 1px solid transparent;
+  border-left: 4px solid var(--blue);
+  background: var(--room-4-fill);
+}
+
+.appointment-block:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px color-mix(in oklch, var(--cyan) 16%, transparent);
+}
+
+.appointment-block .block-patient {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appointment-block .block-meta {
+  color: color-mix(in oklch, var(--ink) 72%, transparent);
+  font-weight: 600;
+}
+
+/* --- Formulário aberto: empilha cabeçalho --- */
+.app-shell.form-open .workspace-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* --- Responsivo (mobile) --- */
+@media (max-width: 720px) and (orientation: portrait) {
+  .topbar {
+    margin: -10px -10px 12px;
+    padding: 0 10px;
+    background: color-mix(in oklch, var(--surface) 96%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .topbar-inner {
+    min-height: 0;
+    padding: 10px 0;
+    gap: 10px;
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    width: auto;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .brand-lockup {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .brand-name {
+    font-size: 1.25rem;
+  }
+
+  .workspace-header {
+    padding: 12px;
+  }
+
+  .date-nav-row {
+    gap: 8px;
+  }
+
+  .strip-arrow {
+    display: none;
+  }
+
+  /* No celular vertical usamos só a visão Dia — sem seletor de visão */
+  .view-select {
+    display: none;
+  }
+
+  .view-select-btn {
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+  /* --- Filtro como 2ª linha deslizante (abaixo da faixa de datas) --- */
+  /* a faixa de datas fica intacta na 1ª linha; o filtro abre numa 2ª linha */
+  .date-nav-row {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  /* mantém a faixa visível (no mobile o filtro NÃO substitui as datas) */
+  .date-nav-row.is-filtering .date-strip {
+    display: flex;
+  }
+
+  /* sempre presente para animar entrada/saída via max-height; ocupa a linha inteira embaixo */
+  .filter-inline {
+    display: flex;
+    order: 99;
+    flex: 0 0 100%;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    transition:
+      max-height 0.26s ease,
+      opacity 0.2s ease,
+      margin-top 0.26s ease;
+  }
+
+  .date-nav-row.is-filtering .filter-inline {
+    max-height: 170px;
+    opacity: 1;
+    margin-top: 12px;
+  }
+
+  /* libera o overflow quando o filtro termina de abrir, pra o popover dos dropdowns não ser cortado */
+  .filter-inline.is-expanded {
+    overflow: visible;
+  }
+
+  .filter-inline .toolbar-filter {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    font-size: 0.72rem;
+  }
+
+  /* no layout em coluna, o dropdown não pode ter flex-basis:0 (colapsaria a altura) */
+  .filter-inline .toolbar-filter .filter-select {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  /* os dois botões ocupam a linha inteira embaixo, lado a lado */
+  .filter-inline .filter-actions {
+    flex: 1 1 100%;
+    display: flex;
+    gap: 10px;
+  }
+
+  .filter-inline .filter-actions .clear-filters,
+  .filter-inline .filter-actions .apply-filters {
+    flex: 1 1 0;
+    min-height: 46px;
+  }
+}
+
+/* ==============================================================
+   Celular na horizontal — "pager" por sala (linha + coluna congeladas)
+   Deslizar de lado troca de sala (encaixe obrigatório); horários fixos
+   à esquerda e cabeçalho das salas fixo no topo. As larguras das colunas
+   são definidas no JS (renderDayView, ramo isMobileLandscape).
+   ============================================================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* container que rola: encaixe horizontal obrigatório, respeitando a coluna fixa */
+  .day-grid-wrap {
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 64px; /* = timeColWidth, encaixa logo após a coluna fixa */
+  }
+
+  /* coluna de horários: fixa à esquerda; fundo opaco cobre o que passa por baixo */
+  .time-column {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface-strong);
+  }
+
+  /* canto "Horário": fixo no topo E à esquerda → acima de tudo */
+  .time-column .time-head {
+    z-index: 6;
+  }
+
+  /* cada sala é um ponto de encaixe */
+  .room-column {
+    scroll-snap-align: start;
+  }
+
+  /* Sem o header da marca, a agenda ocupa a tela: tira a moldura/margem desnecessária */
+  .app-shell {
+    padding: 6px max(6px, env(safe-area-inset-right)) 6px max(6px, env(safe-area-inset-left));
+  }
+
+  .schedule-area {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .workspace-header {
+    padding: 6px 0 10px;
+    border-radius: 0;
+  }
+
+  /* mais altura útil pra grade (não há topbar acima) */
+  .day-grid-wrap {
+    max-height: calc(100dvh - 78px);
+  }
+}
+
+/* ==============================================================
+   Mobile (retrato e paisagem): o header da marca ("Espaço do Pensar")
+   só aparece enquanto o site abre / a planilha carrega (e em erro).
+   Quando termina (online/local), some pra liberar a área da agenda.
+   ============================================================== */
+@media (max-width: 720px) and (orientation: portrait),
+       (orientation: landscape) and (max-height: 500px) {
+  body[data-sync="online"] .topbar,
+  body[data-sync="local"] .topbar {
+    display: none;
   }
 }

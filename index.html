@@ -3,40 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Agenda clínica do Espaço do Pensar para organizar atendimentos por paciente, profissional, sala e horário."
+    />
     <title>Agenda Espaço do Pensar</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="icon" href="assets/logo-espaco-do-pensar.jpeg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css?v=50" />
   </head>
-  <body>
+  <body data-sync="loading">
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand-lockup">
-          <img class="brand-logo" src="assets/logo-espaco-do-pensar.jpeg" alt="Espaço do Pensar" />
-          <div>
-            <p class="brand-context">Espaço do Pensar</p>
-            <h1>Agenda clínica</h1>
+        <div class="topbar-inner">
+          <div class="brand-lockup">
+            <h1 class="brand-name">Espaço do Pensar</h1>
+            <span class="brand-eyebrow">Agenda clínica</span>
           </div>
-        </div>
 
-        <div class="topbar-actions">
-          <div class="sync-status" id="sync-status" data-state="local" role="status" aria-live="polite">Local</div>
-          <button
-            class="new-appointment-button"
-            type="button"
-            id="new-appointment"
-            aria-controls="appointment-form-panel"
-            aria-expanded="false"
-          >
-            <span aria-hidden="true">+</span>
-            Novo atendimento
-          </button>
-
-          <div class="date-controls" aria-label="Navegação de datas">
-            <button class="icon-button" type="button" id="previous-date" title="Voltar" aria-label="Dia anterior">
-              <span aria-hidden="true">‹</span>
-            </button>
-            <button class="today-button" type="button" id="today-date" aria-label="Ir para hoje">Hoje</button>
-            <button class="icon-button" type="button" id="next-date" title="Avançar" aria-label="Próximo dia">
-              <span aria-hidden="true">›</span>
+          <div class="topbar-actions">
+            <div class="sync-status" id="sync-status" data-state="local" role="status" aria-live="polite">Local</div>
+            <button
+              class="new-appointment-button"
+              type="button"
+              id="new-appointment"
+              aria-controls="appointment-form-panel"
+              aria-expanded="false"
+            >
+              <span aria-hidden="true">+</span>
+              Novo atendimento
             </button>
           </div>
         </div>
@@ -81,17 +81,10 @@
               <datalist id="psychologist-options"></datalist>
             </label>
 
-            <div class="field-grid">
-              <label>
-                <span>Data</span>
-                <input id="date" name="date" type="date" required />
-              </label>
-
-              <label>
-                <span>Sala</span>
-                <select id="room" name="room" required></select>
-              </label>
-            </div>
+            <label>
+              <span>Data</span>
+              <input id="date" name="date" type="date" required />
+            </label>
 
             <div class="field-grid">
               <label>
@@ -103,6 +96,12 @@
                 <span>Término</span>
                 <input id="end" name="end" type="time" min="08:00" max="22:00" step="3600" required />
               </label>
+            </div>
+
+            <div class="room-field">
+              <span class="field-label">Sala</span>
+              <div class="room-options" id="room-options" role="radiogroup" aria-label="Sala"></div>
+              <input type="hidden" id="room" name="room" />
             </div>
 
             <label>
@@ -120,79 +119,90 @@
         </aside>
 
         <section class="schedule-area" aria-label="Painel da agenda">
-          <div class="schedule-toolbar">
-            <div>
-              <p class="current-period" id="current-period"></p>
-              <div class="summary-strip" id="summary-strip"></div>
-            </div>
+          <header class="workspace-header">
+            <h2 class="current-period visually-hidden" id="current-period"></h2>
 
-            <div class="schedule-tools">
-              <label class="toolbar-filter room-filter">
-                <span>Sala</span>
-                <select id="filter-room" name="filter-room">
-                  <option value="all">Todas</option>
-                </select>
-              </label>
+            <div class="date-nav-row">
+              <div class="calendar-wrap">
+                <button class="calendar-button" type="button" id="open-calendar" aria-label="Escolher data no calendário">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect>
+                    <line x1="3" y1="9.5" x2="21" y2="9.5"></line>
+                    <line x1="8" y1="2.5" x2="8" y2="6.5"></line>
+                    <line x1="16" y1="2.5" x2="16" y2="6.5"></line>
+                  </svg>
+                </button>
+                <input class="date-jump-input" type="date" id="jump-date" aria-label="Selecionar data" tabindex="-1" />
+              </div>
 
-              <label class="toolbar-filter psychologist-filter">
-                <span>Psicólogo(a)</span>
-                <select id="filter-psychologist" name="filter-psychologist">
-                  <option value="all">Todas</option>
-                </select>
-              </label>
+              <button class="strip-arrow" type="button" id="previous-date" aria-label="Datas anteriores">
+                <span aria-hidden="true">‹</span>
+              </button>
+              <div class="date-strip" id="date-strip" role="listbox" aria-label="Selecionar data" tabindex="0"></div>
+              <button class="strip-arrow" type="button" id="next-date" aria-label="Próximas datas">
+                <span aria-hidden="true">›</span>
+              </button>
 
-              <div class="view-tabs" role="tablist" aria-label="Modo de visualização">
+              <div class="filter-inline" id="filter-inline">
+                <div class="toolbar-filter room-filter">
+                  <span>Sala</span>
+                  <div class="filter-select" id="filter-room-select">
+                    <button class="view-select-btn filter-select-btn" type="button" id="filter-room-btn" aria-haspopup="listbox" aria-controls="filter-room-menu" aria-expanded="false">
+                      <span class="filter-select-label" id="filter-room-label">Todas</span>
+                      <span class="chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="view-select-menu is-hidden" id="filter-room-menu" role="listbox" aria-label="Sala"></div>
+                  </div>
+                  <input type="hidden" id="filter-room" name="filter-room" value="all" />
+                </div>
+                <div class="toolbar-filter psychologist-filter">
+                  <span>Psicólogo(a)</span>
+                  <div class="filter-select" id="filter-psychologist-select">
+                    <button class="view-select-btn filter-select-btn" type="button" id="filter-psychologist-btn" aria-haspopup="listbox" aria-controls="filter-psychologist-menu" aria-expanded="false">
+                      <span class="filter-select-label" id="filter-psychologist-label">Todas</span>
+                      <span class="chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="view-select-menu is-hidden" id="filter-psychologist-menu" role="listbox" aria-label="Psicólogo(a)"></div>
+                  </div>
+                  <input type="hidden" id="filter-psychologist" name="filter-psychologist" value="all" />
+                </div>
+                <div class="filter-actions">
+                  <button class="ghost-button small clear-filters" type="button" id="clear-filters">Limpar filtro</button>
+                  <button class="primary-button small apply-filters" type="button" id="apply-filters">Aplicar filtro</button>
+                </div>
+              </div>
+
+              <div class="view-select">
                 <button
+                  class="view-select-btn"
                   type="button"
-                  class="tab-button active"
-                  id="view-tab-day"
-                  data-view="day"
-                  role="tab"
-                  aria-selected="true"
-                  aria-controls="schedule-content"
-                  tabindex="0"
+                  id="view-select-btn"
+                  aria-haspopup="true"
+                  aria-controls="view-select-menu"
+                  aria-expanded="false"
                 >
-                  Dia
+                  <span id="view-select-label">Dia</span>
+                  <span class="chevron" aria-hidden="true">▾</span>
                 </button>
-                <button
-                  type="button"
-                  class="tab-button"
-                  id="view-tab-week"
-                  data-view="week"
-                  role="tab"
-                  aria-selected="false"
-                  aria-controls="schedule-content"
-                  tabindex="-1"
-                >
-                  Semana
-                </button>
-                <button
-                  type="button"
-                  class="tab-button"
-                  id="view-tab-month"
-                  data-view="month"
-                  role="tab"
-                  aria-selected="false"
-                  aria-controls="schedule-content"
-                  tabindex="-1"
-                >
-                  Mês
-                </button>
-                <button
-                  type="button"
-                  class="tab-button"
-                  id="view-tab-rooms"
-                  data-view="rooms"
-                  role="tab"
-                  aria-selected="false"
-                  aria-controls="schedule-content"
-                  tabindex="-1"
-                >
-                  Salas
+                <div class="view-select-menu is-hidden" id="view-select-menu" role="tablist" aria-label="Modo de visualização">
+                  <button type="button" class="tab-button active" id="view-tab-day" data-view="day" role="tab" aria-selected="true" aria-controls="schedule-content" tabindex="0">Dia</button>
+                  <button type="button" class="tab-button" id="view-tab-week" data-view="week" role="tab" aria-selected="false" aria-controls="schedule-content" tabindex="-1">Semana</button>
+                  <button type="button" class="tab-button" id="view-tab-month" data-view="month" role="tab" aria-selected="false" aria-controls="schedule-content" tabindex="-1">Mês</button>
+                  <button type="button" class="tab-button" id="view-tab-rooms" data-view="rooms" role="tab" aria-selected="false" aria-controls="schedule-content" tabindex="-1">Salas</button>
+                </div>
+              </div>
+
+              <div class="filter-control">
+                <button class="filter-btn" type="button" id="filter-btn" aria-expanded="false" aria-controls="filter-inline" aria-label="Filtros">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6"></line>
+                    <line x1="7" y1="12" x2="17" y2="12"></line>
+                    <line x1="10" y1="18" x2="14" y2="18"></line>
+                  </svg>
                 </button>
               </div>
             </div>
-          </div>
+          </header>
 
           <div
             class="schedule-content"
@@ -203,6 +213,8 @@
           ></div>
         </section>
       </main>
+
+      <div class="form-scrim" id="form-scrim" aria-hidden="true"></div>
     </div>
 
     <template id="appointment-template">
@@ -232,8 +244,8 @@
       <span class="fab-label">Novo</span>
     </button>
 
-    <script src="config.js"></script>
+    <script src="config.js?v=8"></script>
     <script src="directory.js?v=1"></script>
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=50"></script>
   </body>
 </html>
