@@ -492,6 +492,10 @@ textarea:focus {
   background: var(--blue);
 }
 
+.room-option.room-5 .room-option-name::before {
+  background: var(--slate);
+}
+
 .room-status {
   flex: 0 0 auto;
   padding: 3px 9px;
@@ -738,6 +742,12 @@ textarea:focus {
   color: var(--blue);
 }
 
+.drop-preview.room-5 {
+  border-color: var(--slate);
+  background: color-mix(in oklch, var(--slate) 8%, transparent);
+  color: var(--slate);
+}
+
 .week-grid,
 .rooms-grid,
 .month-grid {
@@ -857,6 +867,11 @@ textarea:focus {
 .month-event.room-4 {
   border-color: color-mix(in oklch, var(--blue) 34%, var(--line));
   background: color-mix(in oklch, var(--blue) 11%, var(--surface));
+}
+
+.month-event.room-5 {
+  border-color: color-mix(in oklch, var(--slate) 34%, var(--line));
+  background: color-mix(in oklch, var(--slate) 11%, var(--surface));
 }
 
 .day-column,
@@ -993,6 +1008,10 @@ textarea:focus {
   border-left-color: var(--blue);
 }
 
+.mobile-appointment-card.room-5 {
+  border-left-color: var(--slate);
+}
+
 .mobile-card-main {
   display: flex;
   align-items: stretch;
@@ -1051,6 +1070,11 @@ textarea:focus {
   color: var(--blue);
 }
 
+.mobile-appointment-card.room-5 .mobile-card-room {
+  background: color-mix(in oklch, var(--slate) 16%, var(--surface));
+  color: var(--slate);
+}
+
 .mobile-card-start {
   color: var(--cyan-dark);
   font-size: 1.2rem;
@@ -1068,6 +1092,10 @@ textarea:focus {
 
 .mobile-appointment-card.room-4 .mobile-card-start {
   color: var(--blue);
+}
+
+.mobile-appointment-card.room-5 .mobile-card-start {
+  color: var(--slate);
 }
 
 /* Coluna direita: paciente + profissional */
@@ -1527,6 +1555,8 @@ textarea:focus {
   --room-2-fill: #f4e3c6; /* bege  */
   --room-3-fill: #ffded0; /* terracota */
   --room-4-fill: #d3eae3; /* teal  */
+  --room-5-fill: #e6e9f0; /* ardósia (Pessoal) */
+  --slate: oklch(0.52 0.03 255); /* acento da sala Pessoal */
 }
 
 /* --- Top nav (barra superior full-bleed) --- */
@@ -2017,6 +2047,12 @@ textarea:focus {
   background: var(--room-4-fill);
 }
 
+.appointment-block.room-5 {
+  border: 1px solid transparent;
+  border-left: 4px solid var(--slate);
+  background: var(--room-5-fill);
+}
+
 .appointment-block:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 22px color-mix(in oklch, var(--cyan) 16%, transparent);
@@ -2168,18 +2204,12 @@ textarea:focus {
 }
 
 /* ==============================================================
-   Celular na horizontal — "pager" por sala (linha + coluna congeladas)
-   Deslizar de lado troca de sala (encaixe obrigatório); horários fixos
-   à esquerda e cabeçalho das salas fixo no topo. As larguras das colunas
-   são definidas no JS (renderDayView, ramo isMobileLandscape).
+   Celular na horizontal — 2 salas por tela (linha + coluna congeladas),
+   rolagem horizontal LIVRE (sem encaixe). Horários fixos à esquerda e
+   cabeçalho das salas fixo no topo. As larguras das colunas são definidas
+   no JS (renderDayView, ramo isMobileLandscape).
    ============================================================== */
 @media (orientation: landscape) and (max-height: 500px) {
-  /* container que rola: encaixe horizontal obrigatório, respeitando a coluna fixa */
-  .day-grid-wrap {
-    scroll-snap-type: x mandatory;
-    scroll-padding-left: 64px; /* = timeColWidth, encaixa logo após a coluna fixa */
-  }
-
   /* coluna de horários: fixa à esquerda; fundo opaco cobre o que passa por baixo */
   .time-column {
     position: sticky;
@@ -2191,11 +2221,6 @@ textarea:focus {
   /* canto "Horário": fixo no topo E à esquerda → acima de tudo */
   .time-column .time-head {
     z-index: 6;
-  }
-
-  /* cada sala é um ponto de encaixe */
-  .room-column {
-    scroll-snap-align: start;
   }
 
   /* Sem o header da marca, a agenda ocupa a tela: tira a moldura/margem desnecessária */

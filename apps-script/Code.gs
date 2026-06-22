@@ -19,6 +19,12 @@ const ROOM_NAMES = {
   "pm-3": "PM - Sala 3",
   "pm-1": "PM - Sala 1",
   "mf-2": "MF - Sala 2",
+  "pessoal": "Pessoal",
+};
+
+// Salas ilimitadas: nunca ficam ocupadas, varios atendimentos podem coexistir no mesmo horario.
+const UNLIMITED_ROOMS = {
+  "pessoal": true,
 };
 
 function setup() {
@@ -442,6 +448,11 @@ function validateAppointment_(appointment, appointments) {
 
   const conflict = appointments.find((item) => {
     if (item.id === appointment.id || item.date !== appointment.date) {
+      return false;
+    }
+
+    // Sala ilimitada (ex.: "Pessoal") nunca gera conflito.
+    if (UNLIMITED_ROOMS[appointment.room] || UNLIMITED_ROOMS[item.room]) {
       return false;
     }
 

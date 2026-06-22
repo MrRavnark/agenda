@@ -3,6 +3,8 @@ const ROOMS = [
   { id: "pm-3", name: "PM - Sala 3", className: "room-2" },
   { id: "pm-4", name: "PM - Sala 4", className: "room-3" },
   { id: "mf-2", name: "MF - Sala 2", className: "room-4" },
+  // Sala ilimitada: nunca fica ocupada, vários atendimentos podem coexistir no mesmo horário.
+  { id: "pessoal", name: "Pessoal", className: "room-5", unlimited: true },
 ];
 
 const STORAGE_KEY = "espaco-do-pensar-agenda-v1";
@@ -38,6 +40,8 @@ let stripExtendScheduled = false;
 let lastStripCenter = "";
 let lastPsychologistOptions = null;
 let controlMenuTrigger = null;
+// Filtro de salas é múltipla seleção. Padrão: todas as salas, menos as ilimitadas (ex.: "Pessoal").
+let selectedRoomIds = new Set(ROOMS.filter((room) => !room.unlimited).map((room) => room.id));
 
 const elements = {
   appShell: document.querySelector(".app-shell"),
@@ -173,7 +177,7 @@ function initialise() {
   }
   if (elements.clearFilters) {
     elements.clearFilters.addEventListener("click", () => {
-      resetFilter(elements.filterRoom, elements.filterRoomLabel, elements.filterRoomMenu);
+      resetRoomFilter();
       resetFilter(elements.filterPsychologist, elements.filterPsychologistLabel, elements.filterPsychologistMenu);
       render();
       closeFilterInline();
@@ -281,6 +285,11 @@ function validateAppointment(appointment) {
 
   const conflict = appointments.find((item) => {
     if (item.id === appointment.id || item.date !== appointment.date) {
+      return false;
+    }
+
+    // Sala ilimitada (ex.: "Pessoal") nunca gera conflito — nem por sala nem por profissional.
+    if (isUnlimitedRoom(appointment.room) || isUnlimitedRoom(item.room)) {
       return false;
     }
 
@@ -395,6 +404,9 @@ function getOccupiedRoomIds() {
   appointments.forEach((item) => {
     if (item.id === currentId || item.date !== date) {
       return;
+    }
+    if (isUnlimitedRoom(item.room)) {
+      return; // sala ilimitada nunca conta como ocupada
     }
     if (startMinutes < timeToMinutes(item.end) && endMinutes > timeToMinutes(item.start)) {
       occupied.add(item.room);
@@ -1039,19 +1051,72 @@ function resetFilter(input, label, menu) {
   markFilterActive(menu, "all");
 }
 
-// Menu de Sala (estático, a partir de ROOMS).
+// Menu de Sala: múltipla seleção (checkboxes), a partir de ROOMS.
 function buildRoomFilterMenu() {
-  if (!elements.filterRoomMenu) {
+  const menu = elements.filterRoomMenu;
+  if (!menu) {
     return;
   }
-  const options = [
-    { value: "all", label: "Todas" },
-    ...ROOMS.map((room) => ({ value: room.id, label: room.name })),
-  ];
-  const current = elements.filterRoom ? elements.filterRoom.value || "all" : "all";
-  buildFilterMenu(elements.filterRoomMenu, options, current, (value, text) =>
-    applyFilterSelection(elements.filterRoom, elements.filterRoomLabel, elements.filterRoomMenu, value, text),
-  );
+  menu.innerHTML = "";
+  ROOMS.forEach((room) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tab-button filter-option";
+    button.dataset.value = room.id;
+    button.setAttribute("role", "option");
+    button.addEventListener("click", () => toggleRoomFilter(room.id));
+    menu.append(button);
+  });
+  syncRoomFilterMenu();
+}
+
+function toggleRoomFilter(roomId) {
+  if (selectedRoomIds.has(roomId)) {
+    selectedRoomIds.delete(roomId);
+  } else {
+    selectedRoomIds.add(roomId);
+  }
+  syncRoomFilterMenu();
+  render();
+}
+
+// "Limpar filtro" das salas volta ao padrão: todas, menos as ilimitadas (ex.: "Pessoal").
+function resetRoomFilter() {
+  selectedRoomIds = new Set(ROOMS.filter((room) => !room.unlimited).map((room) => room.id));
+  syncRoomFilterMenu();
+}
+
+// Atualiza os checkboxes e o rótulo do botão conforme a seleção atual.
+function syncRoomFilterMenu() {
+  const menu = elements.filterRoomMenu;
+  if (menu) {
+    menu.querySelectorAll(".filter-option").forEach((button) => {
+      const room = ROOMS.find((item) => item.id === button.dataset.value);
+      const checked = selectedRoomIds.has(button.dataset.value);
+      button.textContent = `${checked ? "☑" : "☐"}  ${room ? room.name : button.dataset.value}`;
+      button.classList.toggle("active", checked);
+      button.setAttribute("aria-checked", String(checked));
+    });
+  }
+  updateRoomFilterLabel();
+}
+
+function updateRoomFilterLabel() {
+  const label = elements.filterRoomLabel;
+  if (!label) {
+    return;
+  }
+  const count = selectedRoomIds.size;
+  if (count === 0) {
+    label.textContent = "Nenhuma";
+  } else if (count >= ROOMS.length) {
+    label.textContent = "Todas";
+  } else if (count === 1) {
+    const only = ROOMS.find((room) => selectedRoomIds.has(room.id));
+    label.textContent = only ? only.name : "1 sala";
+  } else {
+    label.textContent = `${count} salas`;
+  }
 }
 
 function renderPeriodLabel() {
@@ -1253,8 +1318,8 @@ function renderDayView() {
   const grid = document.createElement("div");
   grid.className = "day-grid";
   if (isMobileLandscape()) {
-    // Pager por sala: colunas fixas (~1,3 sala por tela) e a grade transborda na horizontal.
-    const roomColWidth = `calc((100vw - ${timeColWidth}px) / 1.3)`;
+    // Pager por sala: 2 salas por tela; a grade transborda na horizontal e encaixa por sala.
+    const roomColWidth = `calc((100vw - ${timeColWidth}px) / 2)`;
     grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, ${roomColWidth})`;
     grid.style.width = "max-content";
     grid.style.minWidth = "0";
@@ -1357,6 +1422,14 @@ function renderDayView() {
   wrap.append(grid);
   elements.scheduleContent.append(wrap);
 
+  if (isMobileLandscape()) {
+    // Ajuste fino: usa a largura REAL visível (já descontando padding e barra de rolagem)
+    // para mostrar exatamente 2 salas por tela.
+    const available = wrap.clientWidth;
+    const roomColWidthPx = Math.max(150, Math.floor((available - timeColWidth) / 2));
+    grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, ${roomColWidthPx}px)`;
+  }
+
   if (!dayAppointments.length) {
     elements.scheduleContent.append(createEmptyState("Nenhum atendimento neste dia."));
   }
@@ -1389,6 +1462,7 @@ function renderMobileDayList(dayAppointments) {
 
     const freeRooms = visibleRooms.filter(
       (room) =>
+        !isUnlimitedRoom(room.id) && // sala ilimitada não entra na lista de "disponíveis"
         !dayRoomAppointments.some(
           (item) =>
             item.room === room.id &&
@@ -2318,21 +2392,21 @@ function cleanLookupError(value) {
 }
 
 function getVisibleRooms() {
-  const filter = elements.filterRoom ? elements.filterRoom.value : "all";
-  return filter === "all" ? ROOMS : ROOMS.filter((room) => room.id === filter);
+  return ROOMS.filter((room) => selectedRoomIds.has(room.id));
 }
 
 function isAllowedRoomId(roomId) {
   return ROOMS.some((room) => room.id === roomId);
 }
 
+function isUnlimitedRoom(roomId) {
+  return ROOMS.some((room) => room.id === roomId && room.unlimited);
+}
+
 function filterAppointments(items) {
   let filtered = items;
 
-  const roomFilter = elements.filterRoom ? elements.filterRoom.value : "all";
-  if (roomFilter !== "all") {
-    filtered = filtered.filter((item) => item.room === roomFilter);
-  }
+  filtered = filtered.filter((item) => selectedRoomIds.has(item.room));
 
   if (elements.filterPsychologist) {
     const psyFilter = elements.filterPsychologist.value;
@@ -2591,6 +2665,7 @@ function getRoomColor(className) {
     "room-2": "oklch(0.484 0.042 84)",
     "room-3": "oklch(0.492 0.097 43)",
     "room-4": "oklch(0.493 0.052 182)",
+    "room-5": "oklch(0.52 0.03 255)",
   };
   return colors[className] || "oklch(0.478 0.049 149)";
 }

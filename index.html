@@ -15,7 +15,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
     />
-    <link rel="stylesheet" href="styles.css?v=50" />
+    <link rel="stylesheet" href="styles.css?v=55" />
   </head>
   <body data-sync="loading">
     <div class="app-shell">
@@ -151,7 +151,7 @@
                       <span class="filter-select-label" id="filter-room-label">Todas</span>
                       <span class="chevron" aria-hidden="true">▾</span>
                     </button>
-                    <div class="view-select-menu is-hidden" id="filter-room-menu" role="listbox" aria-label="Sala"></div>
+                    <div class="view-select-menu is-hidden" id="filter-room-menu" role="listbox" aria-multiselectable="true" aria-label="Sala"></div>
                   </div>
                   <input type="hidden" id="filter-room" name="filter-room" value="all" />
                 </div>
@@ -244,8 +244,8 @@
       <span class="fab-label">Novo</span>
     </button>
 
-    <script src="config.js?v=8"></script>
+    <script src="config.js?v=9"></script>
     <script src="directory.js?v=1"></script>
-    <script src="app.js?v=50"></script>
+    <script src="app.js?v=55"></script>
   </body>
 </html>
