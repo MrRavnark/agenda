@@ -1318,8 +1318,8 @@ function renderDayView() {
   const grid = document.createElement("div");
   grid.className = "day-grid";
   if (isMobileLandscape()) {
-    // Pager por sala: 2 salas por tela; a grade transborda na horizontal e encaixa por sala.
-    const roomColWidth = `calc((100vw - ${timeColWidth}px) / 2)`;
+    // Largura fixa por sala (teste): a grade transborda na horizontal, rolagem livre.
+    const roomColWidth = `250px`;
     grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, ${roomColWidth})`;
     grid.style.width = "max-content";
     grid.style.minWidth = "0";
@@ -1423,10 +1423,8 @@ function renderDayView() {
   elements.scheduleContent.append(wrap);
 
   if (isMobileLandscape()) {
-    // Ajuste fino: usa a largura REAL visível (já descontando padding e barra de rolagem)
-    // para mostrar exatamente 2 salas por tela.
-    const available = wrap.clientWidth;
-    const roomColWidthPx = Math.max(150, Math.floor((available - timeColWidth) / 2));
+    // Largura fixa por sala (teste): 250px.
+    const roomColWidthPx = 250;
     grid.style.gridTemplateColumns = `${timeColWidth}px repeat(${visibleRooms.length}, ${roomColWidthPx}px)`;
   }
 
